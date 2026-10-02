@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>九上历史复习提纲 · 交互式复习</title>
+<style>
+  :root{
+    --bg:#f5f0e6; --card:#fffdf7; --ink:#3b3225; --sub:#8a7d68;
+    --accent:#8b5e3c; --accent2:#a0774e; --line:#e4d9c6;
+    --done:#4a7c59; --todo:#b04a3a; --hl:#f6e7c9;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:"Microsoft YaHei","PingFang SC",sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.75;
+  }
+  .app{display:flex; min-height:100vh;}
+
+  .sidebar{
+    width:300px; background:#fffaf0; border-right:1px solid var(--line);
+    padding:20px 16px; position:sticky; top:0; height:100vh; overflow-y:auto; flex-shrink:0;
+  }
+  .sidebar h1{font-size:20px; color:var(--accent); margin-bottom:4px;}
+  .sidebar .subtitle{font-size:12px; color:var(--sub); margin-bottom:18px;}
+  .search-box{width:100%; padding:10px 12px; border:1px solid var(--line);
+    border-radius:8px; background:#fff; font-size:14px; margin-bottom:16px;}
+  .search-box:focus{outline:2px solid var(--accent2);}
+  .nav-section{margin-bottom:10px;}
+  .nav-section > .sec-head{
+    font-weight:bold; font-size:14px; color:var(--accent); cursor:pointer;
+    padding:8px 6px; border-radius:6px; display:flex; justify-content:space-between;
+    align-items:center; user-select:none;
+  }
+  .nav-section > .sec-head:hover{background:var(--hl);}
+  .nav-section .sec-items{display:none; padding-left:10px;}
+  .nav-section.open .sec-items{display:block;}
+  .nav-section .sec-head .arrow{transition:transform .2s; font-size:11px;}
+  .nav-section.open .sec-head .arrow{transform:rotate(90deg);}
+  .nav-item{padding:7px 10px; font-size:13px; cursor:pointer; border-radius:6px; color:var(--ink);}
+  .nav-item:hover{background:var(--hl);}
+  .nav-item.active{background:var(--accent); color:#fff;}
+  .nav-item .tag{font-size:14px; margin-left:6px; color:var(--sub);}
+  .nav-item.active .tag{color:#f0e2cf;}
+
+  /* 单元分组：整组折叠（一行：箭头折叠，文字进卡片） */
+  .unit-group{margin:2px 0;}
+  .unit-group .unit-head{
+    font-size:13px; font-weight:bold; color:var(--accent);
+    padding:7px 10px; border-radius:6px;
+    display:flex; align-items:center; gap:5px; user-select:none;
+  }
+  .unit-group .unit-head .arrow{
+    cursor:pointer; transition:transform .2s; font-size:11px; padding:2px 4px;
+  }
+  .unit-group .unit-head .arrow:hover{background:var(--hl); border-radius:4px;}
+  .unit-group:not(.unit-collapsed) .unit-head .arrow{transform:rotate(90deg);}
+  .unit-group .unit-head .u-title{cursor:pointer; flex:1; padding:2px 4px;}
+  .unit-group .unit-head .u-title:hover{background:var(--hl); border-radius:4px;}
+  .unit-group .unit-head.active{background:var(--accent); color:#fff;}
+  .unit-group .unit-head.active .tag{color:#f0e2cf;}
+  .unit-group .unit-items{padding-left:14px; border-left:2px solid var(--line); margin-left:10px;}
+  .unit-group .unit-items .nav-item{font-size:12.5px; padding:6px 10px;}
+  .unit-group.unit-collapsed .unit-items{display:none;}
+
+  .progress-box{background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px; margin-top:6px;}
+  .progress-box h3{font-size:13px; color:var(--accent); margin-bottom:8px;}
+  .progress-bar{height:10px; background:var(--line); border-radius:6px; overflow:hidden; margin-bottom:6px;}
+  .progress-fill{height:100%; width:0%; background:var(--done); transition:width .4s;}
+  .progress-text{font-size:12px; color:var(--sub);}
+
+  /* 挖空控制区 */
+  .fill-controls{background:#fff; border:1px solid var(--line); border-radius:10px;
+    padding:14px; margin-top:6px;}
+  .fill-controls h3{font-size:13px; color:var(--accent); margin-bottom:10px;}
+  .fc-btn{width:100%; padding:9px 0; margin-bottom:8px; border:none; border-radius:8px;
+    cursor:pointer; font-size:13px; color:#fff; background:var(--accent2); transition:background .2s;}
+  .fc-btn:hover{background:var(--accent);}
+  .fc-btn:last-child{margin-bottom:0;}
+  .fc-btn.primary{background:var(--accent);}
+  .fc-btn.primary:hover{background:var(--accent2);}
+  .fc-btn.alt{background:var(--todo);}
+  .fc-btn.alt:hover{background:#8a3a2c;}
+  .fc-hint{font-size:11px; color:var(--sub); margin-top:10px; line-height:1.6;}
+
+  .main{flex:1; padding:30px 40px 60px; max-width:1100px; margin:0 auto;}
+  .page-title{font-size:28px; color:var(--accent); border-bottom:3px solid var(--accent2); padding-bottom:10px; margin-bottom:8px;}
+  .page-sub{font-size:13px; color:var(--sub); margin-bottom:26px;}
+  .section{display:none;}
+  .section.active{display:block; animation:fade .3s;}
+  @keyframes fade{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
+
+  .sec-banner{background:var(--accent); color:#fff; border-radius:10px; padding:16px 20px; margin-bottom:20px;}
+  .sec-banner h2{font-size:20px;}
+  .sec-banner p{font-size:12px; opacity:.9; margin-top:4px;}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:16px 20px; margin-bottom:16px; transition:box-shadow .2s; position:relative;}
+  .card:hover{box-shadow:0 4px 14px rgba(0,0,0,.06);}
+  .card.done{background:#f1f7f2; border-color:#cfe3d2;}
+  .card.done::after{content:"✓"; position:absolute; top:14px; right:16px; color:var(--done); font-size:20px; font-weight:bold;}
+  .card h3{font-size:17px; color:var(--accent); margin-bottom:10px; padding-right:40px;}
+  .card ul{list-style:none;}
+  .card li{padding:5px 0 5px 22px; position:relative; font-size:14.5px;}
+  .card li::before{content:"▸"; position:absolute; left:4px; color:var(--accent2);}
+  .card li strong{color:var(--accent);}
+  .card .quote{background:var(--hl); border-left:4px solid var(--accent2); padding:10px 14px;
+    border-radius:0 6px 6px 0; margin:8px 0; font-size:14px; color:#5a4d38; list-style:none;}
+  .card .quote::before{content:"";}
+  .mark-btn{margin-top:12px; padding:6px 14px; border:none; border-radius:6px; cursor:pointer;
+    background:var(--accent2); color:#fff; font-size:13px; transition:background .2s;}
+  .mark-btn:hover{background:var(--accent);}
+  .card.done .mark-btn{background:var(--todo);}
+
+  /* 原位挖空 */
+  .blank{color:var(--accent); font-weight:bold; background:var(--hl); border-bottom:2px solid var(--accent2);
+    padding:0 5px; border-radius:3px; margin:0 2px; display:inline-block;}
+  .blank.hidden{color:transparent; background:repeating-linear-gradient(45deg,#f6e7c9,#f6e7c9 6px,#efdfbc 6px,#efdfbc 12px);
+    border-bottom:2px dashed var(--accent2); user-select:none;}
+  .ans-btn{display:inline-block; margin-left:4px; padding:1px 7px; font-size:11px; cursor:pointer;
+    background:var(--accent2); color:#fff; border:none; border-radius:4px; vertical-align:middle;}
+  .ans-btn:hover{background:var(--accent);}
+
+  /* 让图片适应知识点卡片宽度 */
+  .kp-img { max-width: 100%; height: auto; border-radius: 6px; margin: 8px auto; display: block; }
+
+  /* 自测题样式 */
+  .quiz{padding-top:14px; border-top:1px dashed var(--line); margin-top:14px;}
+  .quiz-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;}
+  .quiz-head h3{font-size:16px; color:var(--accent); margin:0;}
+  .quiz-btn{background:var(--accent); color:#fff; border:none; padding:7px 14px; border-radius:8px; cursor:pointer; font-size:13px;}
+  .quiz-btn:hover{background:var(--accent2);}
+  .quiz-img { max-width: 100%; height: auto; border-radius: 6px; margin: 8px auto; display: block; }
+  .quiz-score{font-size:14px; font-weight:bold; color:var(--accent); margin-bottom:12px; display:none;}
+  .q-item{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:13px 16px; margin-bottom:12px;}
+  .q-item .q{font-size:14.5px; margin-bottom:10px;}
+  .opt{display:block; padding:8px 12px; border:1px solid var(--line); border-radius:8px;
+    margin-bottom:6px; cursor:pointer; font-size:13.5px; transition:background .15s;}
+  .opt:hover{background:var(--hl);}
+  .opt.selected{background:var(--accent2); color:#fff; border-color:var(--accent2);}
+  .opt.correct{background:var(--done); color:#fff; border-color:var(--done);}
+  .opt.wrong{background:var(--todo); color:#fff; border-color:var(--todo);}
+  .q-result{font-size:13px; margin-top:8px; font-weight:bold; display:none;}
+  .q-result.right{color:var(--done);}
+  .q-result.wrong{color:var(--todo);}
+
+  @media(max-width:800px){
+    .app{flex-direction:column;}
+    .sidebar{width:100%; height:auto; position:static;}
+    .main{padding:20px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <h1>📜 九上历史复习提纲</h1>
+    <div class="subtitle">常熟市实验中学历史组 · 中考复习资料</div>
+    <input type="text" class="search-box" id="searchBox" placeholder="🔍 搜索知识点…" autocomplete="off">
+
+    <div id="nav"></div>
+    <div class="progress-box">
+      <h3>📊 复习进度</h3>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">已掌握 0 / 0</div>
+    </div>
+
+    <div class="fill-controls">
+      <h3>✏️ 挖空练习</h3>
+      <button class="fc-btn primary" id="btnStart">开始挖空练习</button>
+      <button class="fc-btn" id="btnReveal">显示全部答案</button>
+      <button class="fc-btn alt" id="btnRestore">恢复原文</button>
+      <div class="fc-hint">作用于当前打开的全部知识点卡片</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <h1 class="page-title">九年级上册 · 世界历史复习提纲</h1>
+    <p class="page-sub">世界古代史 · 世界近代史｜掌握社会形态特点与重大事件影响，构建时空框架，理解制度变革与思想解放的内在联系</p>
+    <div id="content"></div>
+  </main>
+</div>
+
+<script>
+/* ========== 数据 ========== */
+var data = [
+  {id:"SG", title:"世界古代史", sub:"发展特点：多源产生 、多元面貌、不平衡发展<br/>交往方式：既有战争的暴力形式，也有商旅往来、文化交流的和平形式", items:[
+    {id:"SG100", title:"文明的产生与古代亚非文明", kp:[
+      "人类社会发展历经五大社会形态：<strong>原始</strong>社会→<strong>奴隶</strong>社会→<strong>封建</strong>社会→资本主义社会→社会主义社会（唯物史观）",
+      "古埃及、两河流域文明（古巴比伦）、古印度均起源于大河流域，以农业生产为主，属于<strong>大河</strong>文明、农耕文明",
+      "古代文明示意图：<img src='images/古代文明示意图.png' class='kp-img'>",
+      {quote:"古埃及（尼罗河）、古巴比伦（两河）、古印度（印度河/恒河）"}
+    ]},
+    {id:"SG101", title:"原始社会", kp:[
+      "人类起源：约<strong>300万</strong>年前由<strong>古猿</strong>进化而来（非洲露西少女）。",
+      "原始社会：分为<strong>旧石器</strong>（打制石器）时代和<strong>新石器</strong>（磨制石器）时代，两者分界线约<strong>1万</strong>年前。",
+      "国家产生：<strong>农业</strong>和畜牧业起源（进入新石器时代后）——剩余产品和<strong>私有财产</strong>出现——<strong>阶级</strong>出现——国家产生。"
+    ]},
+    {id:"SG102", title:"古代两河流域文明", kp:[
+      "亚洲（西亚），两河=<strong>底格里斯河、幼发拉底河</strong>，又称美索不达米亚",
+      "代表：<strong>古巴比伦</strong>",
+      "成就：<strong>楔形文字、《汉谟拉比法典》</strong>（维护奴隶主利益，体现法制传统源远流长）、星期制"
+    ]},
+    {id:"SG103", title:"古埃及", kp:[
+      "非洲（北非），尼罗河流域（埃及被称为“<strong>尼罗河的赠礼</strong>”）",
+      "成就：<strong>太阳历、象形文字、金字塔</strong>、木乃伊"
+    ]},
+    {id:"SG104", title:"古印度", kp:[
+      "亚洲（南亚），印度河流域、恒河流域",
+      "<strong>种姓制度</strong>：婆罗门、刹帝利、吠舍、首陀罗；国王属第二等级刹帝利",
+      "<strong>佛教</strong>：前6世纪释迦牟尼（乔达摩·悉达多）创立，反对种姓制度，主张众生平等、忍耐顺从",
+      "文学：《摩诃波罗多》《罗摩衍那》；数字符号（印度发明，阿拉伯传播）"
+    ]},
+    {id:"SG200", title:"古代欧洲文明", sub:"海洋文明 · 商业文明", kp:[
+      "古希腊、古罗马属<strong>海洋文明、商业文明</strong>；古希腊文明是西方文明的源头",
+      "古希腊：城邦时代+亚历山大帝国时代；古罗马：共和国时期+帝国时期",
+      "地跨欧亚非三洲的古代帝国：亚历山大帝国、罗马帝国、拜占庭帝国、阿拉伯帝国"
+    ]},
+    {id:"SG201", title:"希腊城邦", kp:[
+      "爱琴海地区；特点：<strong>小国寡民</strong>；代表：斯巴达、雅典、马其顿",
+      "<strong>雅典民主</strong>：最高权力机构=公民大会，<strong>伯里克利</strong>时期达高峰（仅成年男性公民享有民主权利）",
+      "斯巴达寡头政治：权力在国王和长老手中，公民从小接受军事训练"
+    ]},
+    {id:"SG202", title:"亚历山大帝国", kp:[
+      "起源：<strong>马其顿城邦</strong>；疆域：地跨欧、亚、非三洲",
+      "亚历山大东征：促进<strong>东西方文化大交汇</strong>，也给当地人民带来巨大灾难"
+    ]},
+    {id:"SG203", title:"古代希腊文化", kp:[
+      "文学：《荷马史诗》；史学：<strong>希罗多德</strong>《历史》（“史学之父”）、修昔底德《伯罗奔尼撒战争史》",
+      "雕塑：《掷铁饼者》；建筑：雅典卫城",
+      "哲学：<strong>苏格拉底</strong>（认识你自己）、柏拉图、亚里士多德（百科全书式学者）",
+      "科学：欧几里得《几何原本》、阿基米德（浮力定律、杠杆原理）"
+    ]},
+    {id:"SG204", title:"罗马共和国", kp:[
+      "地中海地区（意大利半岛）；建立时间约<strong>公元前509年</strong>",
+      "权力机关：<strong>元老院</strong>掌握实际权力，公民大会只是形式上的最高权力机关",
+      "扩张：通过<strong>布匿战争</strong>灭亡迦太基，到前1世纪后期征服整个地中海地区",
+      "奴隶起义：<strong>斯巴达克起义</strong>（冲击了罗马奴隶主统治）"
+    ]},
+    {id:"SG206", title:"希腊罗马古典文化", kp:[
+      "文学：维吉尔《埃涅阿斯纪》；史学：李维《罗马史》",
+      "建筑：<strong>大竞技场、万神殿</strong>；法学：发展出完整的法律体系，影响后世西方法律",
+      "历法：<strong>儒略历</strong>"
+    ]},
+    {id:"SG207", title:"基督教", kp:[
+      "时间：<strong>1世纪初</strong>；地点：罗马帝国统治下的巴勒斯坦地区",
+      "创始人：<strong>耶稣</strong>",
+      "地位：罗马帝国和法兰克王国的<strong>国教</strong>"
+    ]},
+    {id:"SG300", title:"封建时代的欧洲", sub:"中世纪 · 封建社会", kp:[
+      "476年西罗马帝国被日耳曼人所灭，欧洲进入<strong>封建社会（中世纪）</strong>",
+      "日耳曼人建立许多“蛮族王国”，最强大的是<strong>法兰克王国</strong>；东罗马（拜占庭）延续到1453年被奥斯曼帝国所灭",
+      "欧洲封建社会的三大制度：<strong>封君封臣制度、庄园制、农奴制</strong>"
+    ]},
+    {id:"SG301", title:"法兰克王国", kp:[
+      "建立时间：<strong>481年</strong>；建立者：<strong>克洛维</strong>",
+      "鼎盛：8世纪查理统治时期称“<strong>查理曼帝国</strong>”",
+      "分裂：<strong>843年</strong>查理曼帝国一分为三，成为德、法、意三国雏形"
+    ]},
+    {id:"SG302", title:"封君封臣制度", kp:[
+      "创立：<strong>8世纪前期</strong>法兰克王国",
+      "特点：以<strong>土地封赐为纽带</strong>（“我的附庸的附庸不是我的附庸”）"
+    ]},
+    {id:"SG303", title:"庄园", kp:[
+      "形成：<strong>9-11世纪</strong>；性质：自给自足的经济组织和相对独立的政治单位，是西欧封建制度的基础",
+      "成员：领主和佃户（自由农、农奴）；设<strong>庄园法庭</strong>维护公共秩序"
+    ]},
+    {id:"SG304", title:"欧洲城市的兴起", kp:[
+      "城市兴起：<strong>10世纪</strong>起，伦敦、罗马等",
+      "自治手段：<strong>金钱赎买和武力斗争</strong>（国王颁发特许状）",
+      "市民阶层随工商业繁荣逐渐形成"
+    ]},
+    {id:"SG305", title:"欧洲大学的兴起", kp:[
+      "兴起：<strong>12世纪</strong>，早期有博洛尼亚大学、巴黎大学等",
+      "意义：欧洲中世纪教育“<strong>最美好的花朵</strong>”"
+    ]},
+    {id:"SG306", title:"拜占庭帝国", kp:[
+      "建立：东罗马帝国因首都君士坦丁堡旧称拜占庭得名；宗教：<strong>东正教</strong>",
+      "文化：兼收并蓄基督教和希腊罗马古典文化；史学：普罗柯比；建筑：<strong>圣索菲亚大教堂</strong>",
+      "贡献：保存大量希腊罗马古典作品，为<strong>文艺复兴</strong>提供文化素材",
+      "灭亡：<strong>1453年</strong>被奥斯曼帝国灭亡"
+    ]},
+    {id:"SG307", title:"《查士丁尼法典》", kp:[
+      "拜占庭皇帝查士丁尼下令编成",
+      "《查士丁尼法典》《法学汇纂》《法理概要》《新法典》统称<strong>《罗马民法大全》</strong>，奠定欧洲民法基础"
+    ]}
+  ]},
+  {id:"SJ", title:"世界近代史", sub:"资本主义发展 · 社会转型", items:[
+    {id:"SJ100", title:"走向近代", kp:[
+      "世界近代史三条线索：资本主义产生发展与全球扩张；社会主义从空想到科学；殖民地人民争取民族解放斗争",
+      "“走向近代”指欧洲从<strong>封建社会过渡到资本主义社会</strong>的社会转型",
+      "14、15世纪西欧资本主义萌芽：手工工场和租地农场出现，随后文艺复兴、新航路开辟、早期殖民掠夺促进资本主义发展",
+      "世界经济中心从<strong>地中海沿岸</strong>转移到大西洋沿岸"
+    ]},
+    {id:"SJ101", title:"西欧经济和社会的发展", kp:[
+      "农业（农村）：出现<strong>租地农场</strong>；手工业（城市）：出现<strong>手工工场</strong>",
+      "共同特点：生产追求利润、出现雇佣关系、产品面向市场",
+      "性质：生产组织资本主义化（<strong>资本主义萌芽</strong>）",
+      "社会发展：农村形成富裕农民；城市形成市民阶层；早期资产阶级=租地农场主+商人+手工工场主"
+    ]},
+    {id:"SJ102", title:"文艺复兴", kp:[
+      "时间：<strong>14—17世纪</strong>（“人的发现”）；兴起于意大利",
+      "根本原因：<strong>资本主义萌芽</strong>；直接原因：资产阶级不满教会精神控制",
+      "核心思想：<strong>人文主义</strong>",
+      "性质：<strong>资产阶级思想解放运动</strong>；意义：解放人们思想，促进资本主义发展"
+    ]},
+    {id:"SJ103", title:"新航路的开辟", kp:[
+      "时间：<strong>15—16世纪</strong>（“世界的发现”）",
+      "根本原因（经济根源）：<strong>资本主义萌芽</strong>；直接原因（商业危机）：奥斯曼帝国控制传统商道",
+      "条件：地圆说流行、造船航海技术进步、葡西王室支持",
+      "影响：世界逐渐成为一个整体；欧洲开始殖民掠夺，促进资本主义发展"
+    ]},
+    {id:"SJ200", title:"资产阶级革命", kp:[
+      "近代欧美三大资产阶级革命：英国资产阶级革命、美国独立战争、法国大革命",
+      "共同结果：确立资产阶级统治，推动资本主义发展",
+      "核心思想来源：文艺复兴的人文主义、启蒙思想等推动思想解放"
+    ]},
+    {id:"SJ201", title:"英国资产阶级革命", kp:[
+      "时间：<strong>1640—1688年</strong>；根本原因：封建专制统治阻碍资本主义发展",
+      "领导阶级：资产阶级和新贵族；领导人：<strong>克伦威尔</strong>",
+      "开始：1640年查理一世重开议会；结束：1688年“<strong>光荣革命</strong>”",
+      "意义：推翻封建君主专制统治，为资本主义发展开辟道路"
+    ]},
+    {id:"SJ202", title:"《权利法案》", kp:[
+      "时间：<strong>1689年</strong>；由议会颁布",
+      "目的：<strong>限制王权</strong>；内容：议会高于国王",
+      "意义：确立<strong>君主立宪制</strong>，议会控制国家权力"
+    ]},
+    {id:"SJ203", title:"《独立宣言》", kp:[
+      "时间：<strong>1776年7月4日</strong>",
+      "内容：<strong>天赋人权、自由平等、主权在民</strong>",
+      "意义：宣告北美13个殖民地脱离英国独立，建立美国",
+      "评价：被称为“<strong>第一个人权宣言</strong>”；局限：种族歧视"
+    ]},
+    {id:"SJ204", title:"1787年宪法", kp:[
+      "地点：<strong>费城</strong>；原则：<strong>分权制衡</strong>",
+      "总统、国会、最高法院分别掌握行政、立法、司法权；联邦制共和国",
+      "评价：世界上<strong>第一部资产阶级成文宪法</strong>",
+      "局限：保留奴隶制、种族歧视、男女不平等"
+    ]},
+    {id:"SJ205", title:"法国大革命", kp:[
+      "根本原因：封建专制统治阻碍法国资本主义发展；导火索：<strong>三级会议</strong>召开",
+      "开始：<strong>1789年7月14日</strong>攻占巴士底狱",
+      "成果：《人权宣言》；共和：法兰西第一共和国，路易十六被处死；高潮：<strong>罗伯斯庇尔</strong>专政",
+      "意义：摧毁法国封建统治，促进资本主义发展，具有世界性影响"
+    ]},
+    {id:"SJ300", title:"工业革命与马克思主义", kp:[
+      "工业革命推动资本主义迅速发展，同时暴露资本主义弊端，催生工人运动与科学社会主义",
+      "18世纪60年代—19世纪中期，英国率先完成工业革命，成为世界上第一个工业国家",
+      "马克思主义应运而生，指导无产阶级革命，推动国际共产主义运动"
+    ]},
+    {id:"SJ301", title:"第一次工业革命", kp:[
+      "时间：<strong>18世纪60年代—19世纪中期</strong>；开始标志：1765年哈格里夫斯发明<strong>珍妮纺纱机</strong>",
+      "重要发明：1785年<strong>瓦特改良蒸汽机</strong>；主要标志：蒸汽机成为工业生产的主要动力来源",
+      "组织变化：手工劳动→机器生产，手工工场→<strong>现代工厂</strong>（现代工厂制度确立）",
+      "影响：人类进入“<strong>蒸汽时代</strong>”；社会分化为工业资产阶级和工业无产阶级两大对立阶级",
+      "启示：科技是第一生产力；科技是一把双刃剑"
+    ]},
+    {id:"SJ302", title:"马克思主义的诞生", kp:[
+      "创立者：<strong>马克思、恩格斯</strong>；创立标志：<strong>1848年《共产党宣言》</strong>发表",
+      "组成：马克思主义哲学、政治经济学、科学社会主义",
+      "背景：工业革命发展，资本主义弊端日益暴露；早期三大工人运动失败需要科学理论指导",
+      "意义：无产阶级斗争有了科学理论指导，国际共产主义运动兴起并蓬勃发展"
+    ]}
+  ]}
+];
+
+/* ========== 自测题（每章2道） ========== */
+var quizzes = {
+  "SG100":[["四大文明古国中，古埃及文明起源于哪条河流？","尼罗河","两河流域","印度河","黄河",0]],
+  "SG101":[["人类由古猿进化而来大约始于多少年前？<br><img src='images/古代文明示意图.png' class='quiz-img'>","300万年前","1万年前","100万年前","500万年前",0],
+           ["旧石器时代与新石器时代的分界线大约是？","约3万年前","约1万年前","约5000年前","约10万年前",1]],
+  "SG102":[["两河流域又称？","尼罗河流域","美索不达米亚","恒河流域","爱琴海",1],
+           ["《汉谟拉比法典》维护哪个阶级的利益？","奴隶","奴隶主","地主","农民",1]],
+  "SG103":[["埃及被称为“尼罗河的赠礼”，其文明属于？","海洋文明","大河文明","草原文明","山地文明",1],
+           ["下列不属于古埃及成就的是？","太阳历","象形文字","金字塔","楔形文字",3]],
+  "SG104":[["古印度的种姓制度中，国王属于哪个等级？","婆罗门","刹帝利","吠舍","首陀罗",1],
+           ["佛教的创立者是？","耶稣","释迦牟尼","默罕默德","亚里士多德",1]],
+  "SG200":[["古希腊、古罗马文明属于？","大河文明","农耕文明","海洋文明","山地文明",2],
+           ["下列哪个帝国不属于地跨欧亚非三洲的古代帝国？","亚历山大帝国","罗马帝国","阿拉伯帝国","法兰克王国",3]],
+  "SG201":[["雅典民主政治的最高权力机构是？","元老院","公民大会","长老会议","执政官",1],
+           ["雅典民主政治发展到高峰是在谁主政时期？","梭伦","伯里克利","克里斯提尼","亚历山大",1]],
+  "SG202":[["亚历山大帝国起源于哪个城邦？","雅典","斯巴达","马其顿","罗马",2],
+           ["亚历山大东征的疆域地跨哪三大洲？","欧、亚、非","欧、亚、美","亚、非、大洋洲","欧、美、非",0]],
+  "SG203":[["被称为西方“史学之父”的是？","修昔底德","希罗多德","李维","柏拉图",1],
+           ["提出“认识你自己”的哲学家是？","柏拉图","亚里士多德","苏格拉底","阿基米德",2]],
+  "SG204":[["罗马共和国掌握实际权力的机构是？","公民大会","元老院","执政官","保民官",1],
+           ["罗马通过哪场战争灭亡了北非的迦太基？","布匿战争","希波战争","伯罗奔尼撒战争","亚历山大东征",0]],
+  "SG206":[["古罗马的建筑成就不包括？","大竞技场","万神殿","雅典卫城","儒略历",2],
+           ["古罗马使用的历法是？","太阳历","太阴历","儒略历","公历",2]],
+  "SG207":[["基督教创立于何时？","1世纪初","2世纪","前6世纪","6世纪",0],
+           ["基督教的创始人是？","默罕默德","释迦牟尼","耶稣","摩西",2]],
+  "SG300":[["476年灭亡西罗马帝国的是？","奥斯曼帝国","日耳曼人","阿拉伯人","拜占庭",1],
+           ["欧洲封建社会的三大制度不包括？","封君封臣制度","庄园制","农奴制","科举制",3]],
+  "SG301":[["法兰克王国的建立者是？","查理","克洛维","查理曼","路易十六",1],
+           ["查理曼帝国分裂成为哪些国家的雏形？","德、法、意","英、法、美","俄、德、法","意、西、葡",0]],
+  "SG302":[["封君封臣制度以什么为纽带？","血缘关系","土地封赐","金钱","军功",1],
+           ["“我的附庸的附庸不是我的附庸”体现了？","庄园制","封君封臣制度","农奴制","城市自治",1]],
+  "SG303":[["西欧庄园的性质是？","资本主义性质","自给自足的经济组织","商业组织","军事组织",1],
+           ["庄园中维护公共秩序的机构是？","元老院","庄园法庭","公民大会","陪审团",1]],
+  "SG304":[["欧洲城市争取自治的手段不包括？","金钱赎买","武力斗争","获得特许状","殖民扩张",3],
+           ["欧洲城市兴起大约始于什么时期？","9世纪","10世纪","12世纪","14世纪",1]],
+  "SG305":[["被称为中世纪教育“最美好的花朵”的是？","手工工场","大学","庄园","教堂",1],
+           ["欧洲最早的大学之一博洛尼亚大学位于？","法国","德国","意大利","英国",2]],
+  "SG306":[["拜占庭帝国的宗教是？","天主教","东正教","伊斯兰教","佛教",1],
+           ["拜占庭帝国灭亡于哪一年？","1453年","476年","843年","1689年",0]],
+  "SG307":[["《罗马民法大全》奠定欧洲什么的基础？","资本主义","民法","宪法","税法",1],
+           ["《查士丁尼法典》由哪位皇帝下令编成？","君士坦丁","查士丁尼","查理曼","奥古斯都",1]],
+  "SJ100":[["“走向近代”指欧洲的哪种社会转型？","奴隶社会→封建社会","封建社会→资本主义社会","资本主义→社会主义","农业社会→工业社会",1],
+           ["新航路开辟后世界经济中心转移到哪里？","地中海沿岸","大西洋沿岸","太平洋沿岸","印度洋沿岸",1]],
+  "SJ101":[["西欧城市出现的生产组织是？","租地农场","手工工场","庄园","农奴制",1],
+           ["早期资产阶级不包括？","租地农场主","商人","手工工场主","农奴",3]],
+  "SJ102":[["文艺复兴的核心思想是？","人文主义","君权神授","众生平等","分权制衡",0],
+           ["文艺复兴的根本原因是？","教会控制","资本主义萌芽","地圆说","寻金热",1]],
+  "SJ103":[["新航路开辟的直接原因是？","资本主义萌芽","奥斯曼帝国控制传统商道","传播基督教","地圆说",1],
+           ["新航路开辟带来的影响不包括？","世界逐渐成为一个整体","促进资本主义发展","殖民掠夺","确立君主立宪制",3]],
+  "SJ200":[["近代欧美三大资产阶级革命不包括？","英国资产阶级革命","美国独立战争","法国大革命","俄国十月革命",3],
+           ["推动欧美资产阶级革命思想解放的核心是？","人文主义与启蒙思想","宗教神学","封建专制","殖民掠夺",0]],
+  "SJ201":[["英国资产阶级革命开始的标志是？","光荣革命","查理一世重开议会","攻占巴士底狱","瓦特改良蒸汽机",1],
+           ["英国资产阶级革命的领导人是？","克伦威尔","拿破仑","华盛顿","罗伯斯庇尔",0]],
+  "SJ202":[["《权利法案》颁布于哪一年？","1688年","1689年","1640年","1776年",1],
+           ["《权利法案》确立的政治体制是？","共和制","君主立宪制","联邦制","民主集中制",1]],
+  "SJ203":[["《独立宣言》发布于哪一天？","1776年7月4日","1789年7月14日","1689年","1640年",0],
+           ["《独立宣言》被称为？","第一个人权宣言","第一部宪法","第一部民法典","第一部法典",0]],
+  "SJ204":[["1787年宪法确立的原则是？","君权神授","分权制衡","主权在民","大一统",1],
+           ["1787年宪法是世界上第一部？","资产阶级成文宪法","民法典","人权宣言","成文法",0]],
+  "SJ205":[["法国大革命开始的标志是？","三级会议召开","攻占巴士底狱","颁布《人权宣言》","处死路易十六",1],
+           ["法国大革命的高潮阶段是？","罗伯斯庇尔专政","克伦威尔执政","拿破仑称帝","光荣革命",0]],
+  "SJ300":[["工业革命与马克思主义的关系是？","工业革命暴露资本主义弊端，催生科学社会主义","马克思主义推动工业革命发生","二者无关","工业革命阻碍了马克思主义",0],
+           ["马克思主义诞生的标志是？","《共产党宣言》发表","工业革命完成","《权利法案》颁布","《独立宣言》发布",0]],
+  "SJ301":[["第一次工业革命开始的标志是？","瓦特改良蒸汽机","珍妮纺纱机","火车发明","蒸汽机广泛应用",1],
+           ["第一次工业革命使人类进入什么时代？","电气时代","蒸汽时代","信息时代","原子时代",1]],
+  "SJ302":[["马克思主义诞生于哪一年？","1848年","1689年","1776年","1789年",0],
+           ["马克思主义的创立者是？","马克思、恩格斯","克伦威尔、拿破仑","华盛顿、杰斐逊","瓦特、斯蒂芬森",0]]
+};
+
+/* ========== 渲染 ========== */
+var navEl = document.getElementById("nav");
+var contentEl = document.getElementById("content");
+
+// 生成导航（单元 → 子知识点 二级结构，自动识别整百单元，单元标题只显示一行）
+data.forEach(function(sec){
+  var wrap=document.createElement("div"); wrap.className="nav-section";
+  var head=document.createElement("div"); head.className="sec-head";
+  head.innerHTML='<span>'+sec.title+'</span><span class="arrow">▶</span>';
+  head.setAttribute("data-secid", sec.id);
+  head.onclick=function(){ wrap.classList.toggle("open"); };
+
+  var items=document.createElement("div"); items.className="sec-items";
+
+  var unitWrap=null;
+
+  sec.items.forEach(function(it){
+    var isUnit = it.id.length>=3 && it.id.slice(-2)==="00";
+
+    if(isUnit){
+      unitWrap=document.createElement("div"); unitWrap.className="unit-group";
+      unitWrap.setAttribute("data-unit", it.id);
+
+      // 单元标题：一行。箭头折叠，文字进卡片
+      var un=document.createElement("div"); un.className="unit-head nav-item";
+      un.setAttribute("data-secid", sec.id);
+      un.setAttribute("data-itemid", it.id);
+
+      var arrow=document.createElement("span"); arrow.className="arrow"; arrow.textContent="▸";
+      var title=document.createElement("span"); title.className="u-title";
+      title.innerHTML=it.title+'<span class="tag">'+it.id+'</span>';
+
+      // 点箭头：折叠/展开整组
+      arrow.onclick=function(e){
+        e.stopPropagation();
+        this.parentElement.classList.toggle("unit-collapsed");
+      };
+      // 点标题文字：进入该单元知识点卡片
+      title.onclick=function(e){
+        e.stopPropagation();
+        openSection(sec.id, it.id);
+      };
+
+      un.appendChild(arrow);
+      un.appendChild(title);
+      unitWrap.appendChild(un);
+
+      var sub=document.createElement("div"); sub.className="unit-items";
+      sub.setAttribute("data-unit", it.id);
+      unitWrap.appendChild(sub);
+      items.appendChild(unitWrap);
+    } else {
+      var n=document.createElement("div"); n.className="nav-item sub-item";
+      n.innerHTML=it.title+'<span class="tag">'+it.id+'</span>';
+      n.setAttribute("data-secid", sec.id);
+      n.setAttribute("data-itemid", it.id);
+      n.onclick=function(){ openSection(sec.id, it.id); };
+      if(unitWrap){
+        unitWrap.querySelector(".unit-items").appendChild(n);
+      } else {
+        items.appendChild(n);
+      }
+    }
+  });
+
+  wrap.appendChild(head); wrap.appendChild(items);
+  navEl.appendChild(wrap);
+});
+
+// 生成内容
+data.forEach(function(sec){
+  var secDiv=document.createElement("div"); secDiv.className="section"; secDiv.id="sec-"+sec.id;
+
+  var banner=document.createElement("div"); banner.className="sec-banner";
+  banner.innerHTML='<h2>'+sec.title+'</h2><p>'+(sec.sub||"")+'</p>';
+  secDiv.appendChild(banner);
+
+  sec.items.forEach(function(it){
+    var card=document.createElement("div"); card.className="card";
+    card.id="card-"+it.id;
+    card.setAttribute("data-itemid", it.id);
+
+    var h3=document.createElement("h3"); h3.innerHTML=it.id+" · "+it.title;
+    card.appendChild(h3);
+
+    var ul=document.createElement("ul");
+    var blankCount=0;
+    it.kp.forEach(function(k){
+      var li=document.createElement("li");
+      if(typeof k==="object"){
+        li.className="quote"; li.innerHTML=k.quote;
+      }else{
+        li.innerHTML=renderInlineBlanks(k);
+        blankCount += countBlanks(k);
+      }
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
+
+    if(quizzes[it.id]){
+      card.appendChild(buildQuiz(it.id));
+    }
+
+    var mark=document.createElement("button"); mark.className="mark-btn"; mark.textContent="标记为已掌握";
+    mark.setAttribute("data-id", it.id);
+    mark.onclick=function(){ toggleDone(it.id, mark); };
+    card.appendChild(mark);
+
+    secDiv.appendChild(card);
+  });
+  contentEl.appendChild(secDiv);
+});
+
+/* ========== 原位挖空渲染 ========== */
+function renderInlineBlanks(text){
+  return text.replace(/<strong>(.*?)<\/strong>/g, function(match, content){
+    return '<span class="blank">'+content+'</span><button class="ans-btn" data-ans="'+content.replace(/"/g,'&quot;')+'">答案</button>';
+  });
+}
+function countBlanks(text){
+  var m=text.match(/<strong>/g);
+  return m ? m.length : 0;
+}
+
+/* ========== 自测题构建 ========== */
+function buildQuiz(id){
+  var qs=quizzes[id];
+  var box=document.createElement("div"); box.className="quiz";
+
+  var head=document.createElement("div"); head.className="quiz-head";
+  head.innerHTML='<h3>📝 知识点自测</h3>';
+  var btn=document.createElement("button"); btn.className="quiz-btn";
+  btn.textContent="提交答案";
+  btn.setAttribute("data-id", id);
+  head.appendChild(btn);
+  box.appendChild(head);
+
+  var score=document.createElement("div"); score.className="quiz-score"; score.id="score-"+id;
+  box.appendChild(score);
+
+  qs.forEach(function(q,qi){
+    var item=document.createElement("div"); item.className="q-item";
+    item.innerHTML='<div class="q">'+(qi+1)+'. '+q[0]+'</div>';
+    for(var i=1;i<=4;i++){
+      var opt=document.createElement("label"); opt.className="opt";
+      opt.setAttribute("data-id", id);
+      opt.setAttribute("data-q", qi);
+      opt.setAttribute("data-opt", i-1);
+      opt.textContent=q[i];
+      item.appendChild(opt);
+    }
+    var r=document.createElement("div"); r.className="q-result";
+    r.setAttribute("data-id", id);
+    r.setAttribute("data-r", qi);
+    item.appendChild(r);
+    box.appendChild(item);
+  });
+  return box;
+}
+
+/* ========== 挖空控制（当前章节） ========== */
+function getActiveCards(){
+  var active=document.querySelector(".section.active");
+  if(active){ return active.querySelectorAll(".card"); }
+  return document.querySelectorAll(".card");
+}
+function startPractice(){
+  var cards=getActiveCards();
+  for(var i=0;i<cards.length;i++){
+    var blanks=cards[i].querySelectorAll(".blank");
+    for(var j=0;j<blanks.length;j++){ blanks[j].classList.add("hidden"); }
+  }
+}
+function revealAll(){
+  var cards=getActiveCards();
+  for(var i=0;i<cards.length;i++){
+    var blanks=cards[i].querySelectorAll(".blank");
+    for(var j=0;j<blanks.length;j++){ blanks[j].classList.remove("hidden"); }
+  }
+}
+function restoreText(){ revealAll(); }
+
+document.getElementById("btnStart").addEventListener("click", startPractice);
+document.getElementById("btnReveal").addEventListener("click", revealAll);
+document.getElementById("btnRestore").addEventListener("click", restoreText);
+
+/* ========== 全局事件委托 ========== */
+document.addEventListener("click", function(e){
+  var t=e.target;
+  if(!t || !t.classList) return;
+
+  if(t.classList.contains("ans-btn")){
+    var blank=t.previousElementSibling;
+    if(blank && blank.classList.contains("blank")){ blank.classList.remove("hidden"); }
+    return;
+  }
+  if(t.classList.contains("opt")){
+    var id=t.getAttribute("data-id"), qi=t.getAttribute("data-q");
+    var opts=document.querySelectorAll('.opt[data-id="'+id+'"][data-q="'+qi+'"]');
+    for(var i=0;i<opts.length;i++){ opts[i].classList.remove("selected"); }
+    t.classList.add("selected");
+    return;
+  }
+  if(t.classList.contains("quiz-btn")){
+    checkQuiz(t.getAttribute("data-id"));
+  }
+});
+
+/* ========== 判分 ========== */
+function checkQuiz(id){
+  var qs=quizzes[id];
+  var score=0;
+  qs.forEach(function(q,qi){
+    var opts=document.querySelectorAll('.opt[data-id="'+id+'"][data-q="'+qi+'"]');
+    var correct=q[5];
+    for(var i=0;i<opts.length;i++){
+      opts[i].classList.remove("correct","wrong");
+      if(parseInt(opts[i].getAttribute("data-opt"))===correct) opts[i].classList.add("correct");
+    }
+    var selected=document.querySelector('.opt[data-id="'+id+'"][data-q="'+qi+'"].selected');
+    var r=document.querySelector('.q-result[data-id="'+id+'"][data-r="'+qi+'"]');
+    r.style.display="block";
+    if(selected && parseInt(selected.getAttribute("data-opt"))===correct){
+      r.textContent="✅ 回答正确！"; r.className="q-result right"; score++;
+    }else{
+      r.textContent="❌ 错误，正确答案："+q[correct+1]; r.className="q-result wrong";
+    }
+  });
+  var scoreEl=document.getElementById("score-"+id);
+  scoreEl.style.display="block";
+  scoreEl.textContent="得分："+score+" / "+qs.length;
+}
+
+/* ========== 打开章节 ========== */
+function openSection(secId, itemId){
+  var sections=document.querySelectorAll(".section");
+  for(var i=0;i<sections.length;i++){ sections[i].classList.remove("active"); }
+  var target=document.getElementById("sec-"+secId);
+  target.classList.add("active");
+
+  var navItems=document.querySelectorAll(".nav-item");
+  for(var j=0;j<navItems.length;j++){
+    navItems[j].classList.remove("active");
+    if(navItems[j].getAttribute("data-itemid")===itemId){
+      navItems[j].classList.add("active");
+      var parent=navItems[j].closest(".nav-section");
+      if(parent){ parent.classList.add("open"); }
+    }
+  }
+  var card=document.getElementById("card-"+itemId);
+  if(card){ card.scrollIntoView({behavior:"smooth", block:"start"}); }
+}
+
+/* ========== 标记完成 ========== */
+function toggleDone(id, btn){
+  var card=document.getElementById("card-"+id);
+  card.classList.toggle("done");
+  btn.textContent = card.classList.contains("done") ? "标记为需复习" : "标记为已掌握";
+  updateProgress();
+}
+function updateProgress(){
+  var cards=document.querySelectorAll(".card");
+  var total=cards.length, done=0;
+  for(var i=0;i<total;i++){ if(cards[i].classList.contains("done")) done++; }
+  document.getElementById("progressFill").style.width=(done/total*100)+"%";
+  document.getElementById("progressText").textContent="已掌握 "+done+" / "+total;
+}
+updateProgress();
+
+/* ========== 搜索 ========== */
+var searchBox=document.getElementById("searchBox");
+searchBox.addEventListener("input", function(){
+  var q=this.value.trim().toLowerCase();
+  var sections=document.querySelectorAll(".section");
+  var cards=document.querySelectorAll(".card");
+  var navItems=document.querySelectorAll(".nav-item");
+
+  if(!q){
+    for(var i=0;i<sections.length;i++){ sections[i].style.display=""; sections[i].classList.remove("active"); }
+    for(var j=0;j<cards.length;j++){ cards[j].style.display=""; }
+    for(var k=0;k<navItems.length;k++){ navItems[k].style.display=""; }
+    if(sections.length>0){ sections[0].classList.add("active"); }
+    return;
+  }
+
+  for(var m=0;m<cards.length;m++){
+    var card=cards[m];
+    var match=card.textContent.toLowerCase().indexOf(q)>-1 || card.id.toLowerCase().indexOf(q)>-1;
+    card.style.display = match ? "" : "none";
+  }
+  for(var n=0;n<sections.length;n++){
+    var sec=sections[n];
+    var visible=hasVisibleCard(sec);
+    sec.style.display = visible ? "" : "none";
+    sec.classList.toggle("active", visible);
+  }
+  for(var p=0;p<navItems.length;p++){
+    var id=navItems[p].getAttribute("data-itemid");
+    var c=document.getElementById("card-"+id);
+    navItems[p].style.display = (c && c.style.display!=="none") ? "" : "none";
+  }
+});
+function hasVisibleCard(sec){
+  var cards=sec.querySelectorAll(".card");
+  for(var i=0;i<cards.length;i++){ if(cards[i].style.display!=="none") return true; }
+  return false;
+}
+
+if(document.querySelectorAll(".section").length>0){
+  document.querySelectorAll(".section")[0].classList.add("active");
+}
+</script>
+</body>
+</html>
