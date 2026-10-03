@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>九上填空默写 · 填空背诵网页</title>
+<!-- 主题：Parchment（羊皮纸） -->
+<style>
+:root {
+    --bg-page: #fef9e8;
+    --bg-content: rgba(255, 250, 240, 0.7);
+    --bg-sidebar: #fff7ef;
+    --text-primary: #2c3e2f;
+    --text-secondary: #5a4a3a;
+    --text-heading: #8b4c1a;
+    --blank-border: #c0a06b;
+    --blank-revealed-border: #f4a261;
+    --blank-revealed-bg: #fff0e0;
+    --blank-revealed-text: #d1452b;
+    --sidebar-border: #ffe1b3;
+    --sidebar-title: #b45f2b;
+    --input-border: #ffcd94;
+    --input-bg: #fff6e8;
+    --btn-bg: #ffddb0;
+    --btn-text: #5a3a22;
+    --result-bg: #fff0df;
+    --result-text: #bc6f2c;
+    --stats-bg: #ffebd2;
+    --stats-num: #9b4b1a;
+    --tip-text: #c07a3b;
+    --label-text: #6b3e1c;
+    --sidebar-dash: #ffcf9a;
+    --btn-active-bg: #f7c48b;
+    --content-shadow: 0 8px 20px rgba(0,0,0,0.03);
+    --sidebar-shadow: 0 12px 28px rgba(0,0,0,0.08);
+    --btn-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body {
+    background: var(--bg-page);
+    font-family: '楷体', '华文楷书', 'Microsoft YaHei', 'KaiTi', serif;
+    font-weight: bold;
+    font-size: 28px;
+    line-height: 1.25;
+    color: var(--text-primary);
+    padding: 30px 20px 60px 20px;
+}
+
+/* 主布局 */
+.main-layout {
+    display: flex;
+    gap: 30px;
+    max-width: 1600px;
+    margin: 0 auto;
+    position: relative;
+}
+
+/* 正文区域 */
+.content-area {
+    flex: 4;
+    min-width: 0;
+    background: var(--bg-content);
+    border-radius: 32px;
+    padding: 20px 30px 40px 30px;
+    box-shadow: var(--content-shadow);
+    transition: all 0.2s;
+}
+
+/* 侧边栏 */
+.sidebar {
+    flex: 1;
+    min-width: 240px;
+    background: var(--bg-sidebar);
+    border-radius: 40px;
+    padding: 24px 20px;
+    box-shadow: var(--sidebar-shadow);
+    border: 1px solid var(--sidebar-border);
+    align-self: start;
+    position: sticky;
+    top: 30px;
+    backdrop-filter: blur(2px);
+    transition: all 0.2s;
+}
+
+/* 标题样式 */
+h2, h3, h4 {
+    margin: 1.2rem 0 0.6rem;
+    font-weight: bolder;
+    color: var(--text-heading);
+}
+h2 { font-size: 32px; }
+h3 { font-size: 30px; }
+h4 { font-size: 28px; }
+
+/* 段落样式 */
+p {
+    margin: 14px 0;
+    line-height: 1.6;
+}
+
+/* 填空位样式 */
+.blank-fill {
+    display: inline-block;
+    min-width: 80px;
+    background: transparent;
+    border-bottom: 3px solid var(--blank-border);
+    text-align: center;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    margin: 0 4px;
+    padding: 0 6px;
+    position: relative;
+    vertical-align: baseline;
+    font-size: 28px;
+    line-height: 1.4;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* 显示答案时的样式 */
+.blank-fill.revealed {
+    border-bottom: 3px solid var(--blank-revealed-border);
+    background-color: var(--blank-revealed-bg);
+    color: var(--blank-revealed-text);
+    animation: gentlePop 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    border-radius: 12px;
+    padding: 0 8px;
+}
+
+@keyframes gentlePop {
+    0% { transform: scale(0.92); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* 侧边栏内部样式 */
+.drawer-box h3 {
+    font-size: 32px;
+    text-align: center;
+    color: var(--sidebar-title);
+    margin-bottom: 20px;
+    border-bottom: 3px dashed var(--sidebar-dash);
+    display: inline-block;
+    width: 100%;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 20px 0;
+}
+.input-group label {
+    font-size: 26px;
+    font-weight: bold;
+    color: var(--label-text);
+}
+.input-group input {
+    font-family: '楷体', monospace;
+    font-size: 28px;
+    padding: 10px 16px;
+    border-radius: 48px;
+    border: 2px solid var(--input-border);
+    background: var(--input-bg);
+    font-weight: bold;
+    text-align: center;
+    width: 100%;
+    outline: none;
+}
+
+.btn-group {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 20px 0;
+}
+.btn {
+    font-family: '楷体', 'Segoe UI', sans-serif;
+    font-size: 28px;
+    font-weight: bold;
+    padding: 8px 20px;
+    border-radius: 60px;
+    border: none;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    cursor: pointer;
+    transition: 0.15s linear;
+    box-shadow: var(--btn-shadow);
+}
+.btn:active {
+    transform: scale(0.96);
+    background: var(--btn-active-bg);
+}
+
+.result-area {
+    background: var(--result-bg);
+    border-radius: 48px;
+    padding: 15px;
+    text-align: center;
+    margin: 20px 0;
+    font-size: 44px;
+    font-weight: bold;
+    color: var(--result-text);
+    letter-spacing: 4px;
+}
+.stats {
+    display: flex;
+    justify-content: space-between;
+    background: var(--stats-bg);
+    border-radius: 48px;
+    padding: 12px 18px;
+    font-size: 26px;
+    margin-top: 15px;
+}
+.stats span {
+    font-weight: bold;
+    color: var(--stats-num);
+}
+.warning-tip {
+    font-size: 22px;
+    text-align: center;
+    margin-top: 20px;
+    color: var(--tip-text);
+}
+
+/* 响应式 */
+@media (max-width: 860px) {
+    body { font-size: 22px; }
+    .blank-fill { font-size: 22px; min-width: 60px; }
+    .sidebar { min-width: 200px; }
+    .btn { font-size: 22px; padding: 6px 14px; }
+    .result-area { font-size: 32px; }
+    .content-area { padding: 15px; }
+}
+
+html {
+    scroll-behavior: smooth;
+}
+</style>
+</head>
+<body>
+    <!-- 主布局 -->
+    <div class="main-layout">
+        <!-- 主内容区域（由 JS 动态填充） -->
+        <div class="content-area" id="mainContent"></div>
+
+        <!-- 侧边栏：学号抽取器 -->
+        <div class="sidebar">
+            <div class="drawer-box">
+                <h3>🎲 学号抽取器</h3>
+                <div class="input-group">
+                    <label>📌 最大值</label>
+                    <input type="number" id="maxNumber" value="48" min="1" step="1">
+                </div>
+                <div class="btn-group">
+                    <button class="btn" id="drawBtn">✨ 抽学号</button>
+                    <button class="btn" id="resetDrawBtn">🔄 重置</button>
+                </div>
+                <div class="result-area" id="drawResult">——</div>
+                <div class="stats">
+                    <div>📋 已抽取: <span id="drawnCount">0</span></div>
+                    <div>🎯 剩余: <span id="remainCount">48</span></div>
+                </div>
+                <div class="warning-tip">💡 点击页面空白处也可抽学号</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// 原始文档内容（带有 [答案]{.underline} 和 **加粗** 标记）
+const rawDocument = `**统编版九年级上册 · 填空默写**
+
+1.古埃及文明被认为是“[尼罗河的赠礼]{.underline}”；[金字塔]{.underline}是古埃及文明的象征，是古埃及人智慧的结晶。
+
+2.“两河”指西亚的[幼发拉底河]{.underline}和底格里斯河；《[汉谟拉比法典]{.underline}》是迄今已知世界上第一部比较完整的成文法典，是古巴比伦王国留给人类的宝贵文化遗产，表明人类社会的法制传统源远流长。
+
+3.雅利安人进入印度后，逐渐建立了严格的社会等级制度，史称“[种姓制度]{.underline}”；佛教创立于公元前6世纪，创始人是[乔达摩·悉达多]{.underline}，后来被称为“释迦牟尼”。
+
+4.公元前8世纪，希腊出现了城邦，其中著名的城邦有[雅典]{.underline}、斯巴达；公元前5世纪中后期，[伯里克利]{.underline}当政期间，雅典达到全盛，奴隶制民主政治发展到高峰。
+
+5.公元前509年，罗马共和国建立，[元老院]{.underline}掌握国家大权；公元前27年，屋大维创立[元首制]{.underline}，建立罗马帝国。
+
+6.公元前450年左右，罗马颁布《[十二铜表法]{.underline}》，使量刑定罪有了文字依据，在一定程度上遏制了贵族对法律的曲解和滥用；公元前73年[斯巴达克]{.underline}起义，罗马共和国进一步衰落。
+
+7.《[荷马史诗]{.underline}》是了解希腊早期社会的重要文献；[苏格拉底]{.underline}主张“人应该认识你自己”。
+
+8.1世纪，[基督教]{.underline}产生于巴勒斯坦地区，传道者认为[耶稣]{.underline}就是救世主。
+
+9.8世纪，[查理]{.underline}成为法兰克王国国王，他统治时期的法兰克王国，史称“查理曼帝国”；843年，查理曼帝国一分为三，形成以后德意志、法兰西和[意大利]{.underline}三个国家的雏形。
+
+10.大约到11世纪，[庄园]{.underline}遍布欧洲，它是一个独立的自给自足的经济和政治单位，具有[司法]{.underline}权，设有法庭。
+
+11.到13世纪，许多城市取得了某种程度的自由与特权，成为[自由城市]{.underline}；12世纪，[大学]{.underline}的兴起是欧洲中世纪教育“最美好的花朵”。
+
+12.拜占庭帝国皇帝[查士丁尼]{.underline}编成《查士丁尼法典》，同时又编成《法学汇纂》《法理概要》《新法典》，以上四部统称《[罗马民法大全]{.underline}》，被誉为欧洲民法的基础。
+
+13.5世纪初，在本州中部兴起的[大和]{.underline}政权统一了日本；从646年开始，日本仿效[唐朝]{.underline}的典章制度，进行一系列改革，史称[大化改新]{.underline}。
+
+14.7世纪初，[穆罕默德]{.underline}阐述独尊安拉的宗教思想，创立了伊斯兰教；《[天方夜谭（一千零一夜）]{.underline}》是阿拉伯文学的瑰宝。
+
+15.14世纪，[租地农场]{.underline}产生，雇佣少地或无地的农民耕种；13至14世纪，手工工场出现，体现了[资本主义]{.underline}性质生产关系。
+
+16.14～17世纪，欧洲[文艺复兴]{.underline}运动，充分体现了人文主义精神，促使人们思想解放；18世纪，法国[启蒙]{.underline}运动，宣传“自由”“平等”思想，促进人类社会进步。
+
+17.[但丁]{.underline}是文艺复兴的先驱，代表作《神曲》；[莎士比亚]{.underline}的代表作有《罗密欧与朱丽叶》、《[哈姆雷特]{.underline}》等。
+
+18.[新航路的开辟]{.underline}使世界开始连成一个整体；1492年，[哥伦布]{.underline}横渡大西洋，发现了美洲新大陆；1519-1522年，[麦哲伦]{.underline}的船队完成了首次环球航行，证明了地圆学说的正确性。
+
+19.三角贸易以贩卖[黑奴]{.underline}为中心，路线呈三角形；在殖民争霸中，英国战胜了荷兰和法国，自诩为“[日不落帝国]{.underline}”。
+
+20.1776年，北美大陆会议发表《[独立宣言]{.underline}》，宣告北美13个殖民地脱离英国独立；1789年法国资产阶级颁布《[人权宣言]{.underline}》，宣称人们生来自由，权利平等，私有财产神圣不可侵犯。
+
+21.1689年，英国议会通过了《[权利法案]{.underline}》，以法律形式制约了国王的权利；独立战争后，美国制定了[1787年宪法]{.underline}，体现了分权制衡的原则。
+
+22.美国独立战争爆发的标志是[来克星顿的枪声]{.underline}，转折点是[萨拉托加大捷]{.underline}。
+
+23.法国大革命开始的标志是[攻占巴士底狱]{.underline}，高潮结束的标志是[罗伯斯庇尔]{.underline}被送上断头台。
+
+24.1804年，拿破仑建立了[法兰西第一帝国]{.underline}，颁布了《[拿破仑法典]{.underline}》，成为资本主义国家的立法典范。
+
+25.被马克思称为第一部“人权宣言”的是《[独立宣言]{.underline}》；世界史上第一部资产阶级的成文宪法是《[1787年宪法]{.underline}》。
+
+26.第一次工业革命使人类进入“[蒸汽时代]{.underline}”；第二次工业革命使人类进入“[电气时代]{.underline}”。
+
+27.1848年《[共产党宣言]{.underline}》的发表标志着马克思主义的诞生；1871年，[巴黎公社]{.underline}是无产阶级建立政权的第一次伟大尝试；1917年，俄国的[十月革命]{.underline}是人类历史上第一次胜利的无产阶级革命。
+
+28.第一次工业革命中，[瓦特]{.underline}改进了蒸汽机，[斯蒂芬森]{.underline}研制成功了火车。`;
+
+const mainContent = document.getElementById('mainContent');
+let allBlanks = [];
+let revealedStatus = [];
+let oneThirdFlag = false;
+let twoThirdFlag = false;
+
+// 学号抽取器变量
+let drawnNumbers = [];
+let currentMax = 48;
+const maxInput = document.getElementById('maxNumber');
+const drawBtn = document.getElementById('drawBtn');
+const resetDrawBtn = document.getElementById('resetDrawBtn');
+const drawResultSpan = document.getElementById('drawResult');
+const drawnCountSpan = document.getElementById('drawnCount');
+const remainCountSpan = document.getElementById('remainCount');
+
+// 生成占位符：用全角空格占位（不显示黑色下划线，仅保留棕色底边线）
+function generatePlaceholder(answer) {
+    return '　'.repeat(answer.length);
+}
+
+// HTML 转义
+function escapeHtml(str) {
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+// 渲染内容
+function renderContent() {
+    const underlineRegex = /\[([^\]]+)\]\{\.underline\}/g;
+    let processed = rawDocument.replace(underlineRegex, (match, content) => {
+        return `{{BLANK::${content}}}`;
+    });
+    processed = processed.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    processed = processed.replace(/\n/g, '<br>');
+    processed = processed.replace(/\{\{BLANK::(.*?)\}\}/g, (match, ans) => {
+        const placeholder = generatePlaceholder(ans);
+        return `<span class="blank-fill" data-answer="${escapeHtml(ans)}" data-placeholder="${placeholder}">${placeholder}</span>`;
+    });
+    processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    mainContent.innerHTML = `<div>${processed}</div>`;
+    allBlanks = Array.from(document.querySelectorAll('.blank-fill'));
+    revealedStatus = new Array(allBlanks.length).fill(false);
+    allBlanks.forEach(blank => {
+        const placeholder = blank.getAttribute('data-placeholder');
+        blank.innerText = placeholder;
+        blank.classList.remove('revealed');
+    });
+}
+
+// 显示某个填空
+function showBlank(index) {
+    if (index < 0 || index >= allBlanks.length) return;
+    if (revealedStatus[index]) return;
+    const blank = allBlanks[index];
+    blank.innerText = blank.getAttribute('data-answer');
+    blank.classList.add('revealed');
+    revealedStatus[index] = true;
+    blank.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    checkAutoScroll();
+}
+
+// 隐藏某个填空
+function hideBlank(index) {
+    if (index < 0 || index >= allBlanks.length) return;
+    if (!revealedStatus[index]) return;
+    const blank = allBlanks[index];
+    blank.innerText = blank.getAttribute('data-placeholder');
+    blank.classList.remove('revealed');
+    revealedStatus[index] = false;
+    if (index < allBlanks.length / 3) oneThirdFlag = false;
+    if (index < allBlanks.length * 2 / 3) twoThirdFlag = false;
+}
+
+// 显示下一个未显示的空
+function showNextBlank() {
+    const idx = revealedStatus.indexOf(false);
+    if (idx >= 0) showBlank(idx);
+}
+
+// 隐藏上一个已显示的空
+function hideLastBlank() {
+    for (let i = allBlanks.length - 1; i >= 0; i--) {
+        if (revealedStatus[i]) { hideBlank(i); break; }
+    }
+}
+
+// 进度达到 1/3、2/3 时自动滚动
+function checkAutoScroll() {
+    const revealedCount = revealedStatus.filter(v => v === true).length;
+    if (allBlanks.length === 0) return;
+    const ratio = revealedCount / allBlanks.length;
+    if (ratio >= 1 / 3 && !oneThirdFlag) {
+        oneThirdFlag = true;
+        const target = allBlanks[Math.floor(allBlanks.length / 3)];
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (ratio >= 2 / 3 && !twoThirdFlag) {
+        twoThirdFlag = true;
+        const target = allBlanks[Math.floor(allBlanks.length * 2 / 3)];
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+// 点击填空位：切换显示/隐藏
+function onBlankClick(e) {
+    const blank = e.target.closest('.blank-fill');
+    if (!blank) return;
+    const index = allBlanks.indexOf(blank);
+    if (index < 0) return;
+    if (revealedStatus[index]) hideBlank(index);
+    else showBlank(index);
+}
+
+// 学号抽取器
+function updateDrawStats() {
+    drawnCountSpan.innerText = drawnNumbers.length;
+    remainCountSpan.innerText = Math.max(0, currentMax - drawnNumbers.length);
+}
+
+function drawNumber() {
+    if (drawnNumbers.length >= currentMax) {
+        drawResultSpan.innerText = '已抽完';
+        updateDrawStats();
+        return;
+    }
+    let n, guard = 0;
+    do { n = Math.floor(Math.random() * currentMax) + 1; guard++; }
+    while (drawnNumbers.includes(n) && guard < 2000);
+    drawnNumbers.push(n);
+    drawResultSpan.innerText = n;
+    updateDrawStats();
+}
+
+function resetDraw() {
+    currentMax = parseInt(maxInput.value) || 48;
+    drawnNumbers = [];
+    drawResultSpan.innerText = '——';
+    updateDrawStats();
+}
+
+// 事件绑定
+function bindEvents() {
+    mainContent.addEventListener('click', onBlankClick);
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') { e.preventDefault(); showNextBlank(); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); hideLastBlank(); }
+    });
+    drawBtn.addEventListener('click', (e) => { e.stopPropagation(); drawNumber(); });
+    resetDrawBtn.addEventListener('click', (e) => { e.stopPropagation(); resetDraw(); });
+    document.body.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target === drawBtn || target === resetDrawBtn || target === maxInput ||
+            target.closest('.btn') || target.classList?.contains('blank-fill')) return;
+        drawNumber();
+    });
+    maxInput.addEventListener('change', () => { resetDraw(); });
+}
+
+// 初始化
+function init() {
+    renderContent();
+    bindEvents();
+    resetDraw();
+}
+init();
+</script>
+</body>
+</html>
