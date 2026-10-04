@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>初三历史</title>
+<title>📚 大屈老师的历史小站</title>
 <style>
   :root{
     --bg:#f6f8fb; --card:#ffffff; --border:#e4e8f0;
@@ -11,6 +11,9 @@
     --primary:#4a7df0; --primary-soft:#eef3ff;
     --radius:14px; --shadow:0 2px 10px rgba(31,42,68,.06);
     --shadow-hover:0 8px 24px rgba(31,42,68,.12);
+    /* 通知栏配色变量（可自行调整） */
+    --notice-bg:#fff7e6; --notice-border:#ffd591;
+    --notice-accent:#ffa940; --notice-title:#ad4e00; --notice-text:#5c3a10;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{
@@ -27,6 +30,41 @@
     background:var(--primary-soft); color:var(--primary);
     border-radius:999px; font-size:13px; font-weight:600;
   }
+
+  /* ========== 新增：通知栏（布置作业 / 发布公告） ========== */
+  .notice{
+    max-width:1080px; margin:0 auto 24px;
+    background:var(--notice-bg);
+    border:1px solid var(--notice-border);
+    border-left:5px solid var(--notice-accent);
+    border-radius:var(--radius);
+    padding:16px 20px;
+    box-shadow:var(--shadow);
+  }
+  .notice .notice-head{
+    display:flex; align-items:center; gap:8px;
+    font-size:20px; font-weight:700; color:var(--notice-title);
+    margin-bottom:10px;
+  }
+  .notice .notice-head::before{ content:"📢"; }
+  .notice ul{ list-style:none; }
+  .notice li{
+    font-size:18px; line-height:1.75; color:var(--notice-text);
+    padding-left:18px; position:relative;
+  }
+  .notice li::before{
+    content:"•"; position:absolute; left:2px;
+    color:var(--notice-accent); font-weight:700;
+  }
+  .notice li strong{ color:var(--notice-title); }
+  .notice li time{ color:#b08a5a; font-size:16px; margin-left:6px; }
+  .notice .close{
+    float:right; border:none; background:transparent;
+    color:var(--notice-accent); font-size:16px; cursor:pointer;
+    padding:0 2px; line-height:1;
+  }
+  .notice .close:hover{ color:var(--notice-title); }
+
   /* 卡片网格 */
   .grid{
     max-width:1080px; margin:0 auto;
@@ -63,14 +101,24 @@
 <body>
 
   <div class="hero">
-    <h1>📚 常熟市实验中学初三历史备课组</h1>
-    <p>初中历史教学 · 交互式学习页面集合</p>
+    <h1>📚 大屈老师的历史小站</h1>
+    <p>初中历史教学 · 交互式页面合集</p>
     <span class="badge">持续更新中</span>
+  </div>
+
+  <!-- ========== 新增：通知栏（可关闭） ========== -->
+  <div class="notice" id="notice">
+    <button class="close" onclick="document.getElementById('notice').style.display='none'">✕</button>
+    <div class="notice-head">通知栏</div>
+    <ul>
+      <li><strong>提醒：</strong>下周将安排月考，考试范围是九上1—18课，请同学们认真复习迎考<time>（2026.10.08）</time></li>
+      <!-- 后续需要添加的内容在此继续添加，例如：<li><strong>作业布置：</strong>国庆假期请完成「九上填空默写」第 1–2 章<time>（10.04）</time></li>-->
+    </ul>
   </div>
 
   <div class="grid" id="grid"><!-- 卡片由 JS 生成 --></div>
 
-  <div class="footer">© 常熟市实验中学历史组 · 由腾讯 ima 辅助构建</div>
+  <div class="footer">© 大屈老师的历史小站 · 由腾讯 ima 辅助构建</div>
 
 <script>
 /* ======== 在这里管理所有页面入口 ========
