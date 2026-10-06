@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>中外历史贯通时间轴</title>
+<meta name="description" content="按时代分组的中外历史对照时间轴，支持区域筛选、关键词搜索与并排/贯通双视图。">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23131519'/><text x='16' y='22' font-size='17' text-anchor='middle' fill='%23fff' font-family='serif'>史</text></svg>">
+<!--
+  ============================================================
+  中外历史贯通时间轴 · 单页独立版
+  ------------------------------------------------------------
+  这是一个完全自包含的 HTML 文件：样式、数据、脚本全部内联，
+  不依赖任何外部文件，双击即可打开，也可以单独发给学生或同事。
+
+  想改内容，直接编辑本文件即可；如果用源文件目录结构维护，
+  改完 assets/ 下的文件后运行 node tools/build-standalone.js 重新生成。
+  ============================================================
+-->
+<style>
+/* =========================================================
+   历史教学个人网站 — 全局样式
+   纯静态 / 零依赖 / 系统字体
+   ========================================================= */
+
+/* ---------- 1. 设计变量 ---------- */
+:root {
+  --bg: #ffffff;
+  --bg-soft: #f6f7f9;
+  --bg-tint: #fafbfc;
+  --ink: #131519;
+  --ink-2: #4b5259;
+  --ink-3: #8b929b;
+  --line: #e7e9ed;
+  --line-2: #f0f1f4;
+
+  /* 中国史 / 世界史 语义色 */
+  --cn: #be3a2b;
+  --cn-soft: #fbefec;
+  --cn-line: #f0d5cf;
+  --world: #1c6e8c;
+  --world-soft: #eaf3f7;
+  --world-line: #cfe3eb;
+
+  --accent: #131519;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(19, 21, 25, 0.05);
+  --shadow: 0 10px 34px -18px rgba(19, 21, 25, 0.28);
+
+  --maxw: 1120px;
+  --header-h: 64px;
+
+  --font: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei UI",
+    "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", system-ui,
+    -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ---------- 2. 基础重置 ---------- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 0; }
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+img { max-width: 100%; display: block; }
+
+ul, ol { margin: 0; padding: 0; list-style: none; }
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--world);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: #ffe9a8;
+  color: var(--ink);
+}
+
+/* ---------- 3. 布局工具 ---------- */
+.container {
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.container--narrow { max-width: 780px; }
+
+.section { padding: 76px 0; }
+.section--soft { background: var(--bg-soft); }
+.section--tint { background: var(--bg-tint); }
+.section--tight { padding: 52px 0; }
+
+.section__head { max-width: 720px; margin-bottom: 40px; }
+.section__head--center { margin-left: auto; margin-right: auto; text-align: center; }
+
+.eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 12px;
+}
+
+.section__title {
+  font-size: clamp(24px, 3.2vw, 32px);
+  margin-bottom: 12px;
+}
+
+.section__desc {
+  color: var(--ink-2);
+  font-size: 16px;
+}
+
+.grid { display: grid; gap: 20px; }
+.grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.stack-sm > * + * { margin-top: 10px; }
+.text-muted { color: var(--ink-3); }
+.text-center { text-align: center; }
+
+/* ---------- 4. 顶部导航 ---------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  height: var(--header-h);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+
+.site-header__inner {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.brand__mark {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 9px;
+  background: var(--ink);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.brand__text { display: flex; flex-direction: column; min-width: 0; }
+
+.brand__name {
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brand__sub {
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+}
+
+.nav__list {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav__link {
+  display: block;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.nav__link:hover { color: var(--ink); background: var(--bg-soft); }
+
+.nav__link.is-active {
+  color: var(--ink);
+  font-weight: 700;
+  background: var(--bg-soft);
+}
+
+.nav__toggle {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 0;
+  place-items: center;
+}
+
+.nav__toggle span {
+  display: block;
+  width: 16px;
+  height: 1.5px;
+  background: var(--ink);
+  border-radius: 2px;
+  position: relative;
+}
+
+.nav__toggle span::before,
+.nav__toggle span::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 16px;
+  height: 1.5px;
+  background: var(--ink);
+  border-radius: 2px;
+}
+
+.nav__toggle span::before { top: -5px; }
+.nav__toggle span::after { top: 5px; }
+
+/* ---------- 5. 按钮 ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease,
+    border-color 0.18s ease, box-shadow 0.18s ease;
+  white-space: nowrap;
+}
+
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+
+.btn--primary {
+  background: var(--ink);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+.btn--primary:hover { background: #2a2e35; }
+
+.btn--ghost {
+  background: #fff;
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.btn--ghost:hover { border-color: #c9cdd4; background: #fff; }
+
+.btn--sm { padding: 8px 16px; font-size: 14px; }
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* ---------- 6. Hero ---------- */
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 88px 0 76px;
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(900px 420px at 88% -10%, #eef4f7 0%, rgba(255,255,255,0) 62%),
+    radial-gradient(700px 380px at 4% 108%, #fbf0ed 0%, rgba(255,255,255,0) 60%),
+    #fff;
+}
+
+.hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 56px;
+  align-items: center;
+}
+
+.hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 13px;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-bottom: 22px;
+}
+
+.hero__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cn);
+}
+
+.hero__title {
+  font-size: clamp(32px, 5vw, 50px);
+  letter-spacing: -0.025em;
+  margin-bottom: 20px;
+}
+
+.hero__title em {
+  font-style: normal;
+  color: var(--cn);
+  position: relative;
+}
+
+.hero__desc {
+  font-size: 17px;
+  color: var(--ink-2);
+  max-width: 46ch;
+  margin-bottom: 30px;
+}
+
+.hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin-top: 34px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.hero__meta-item { display: flex; flex-direction: column; }
+
+.hero__meta-num {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.hero__meta-label { font-size: 12.5px; color: var(--ink-3); }
+
+/* Hero 右侧装饰：时间轴示意 */
+.hero__panel {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 24px 22px;
+  box-shadow: var(--shadow);
+}
+
+.hero__panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.mini-axis { position: relative; padding-left: 18px; }
+
+.mini-axis::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--line);
+}
+
+.mini-axis__item {
+  position: relative;
+  padding: 8px 0;
+}
+
+.mini-axis__item::before {
+  content: "";
+  position: absolute;
+  left: -17px;
+  top: 16px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--ink-3);
+}
+
+.mini-axis__item.is-cn::before { border-color: var(--cn); }
+.mini-axis__item.is-world::before { border-color: var(--world); }
+
+.mini-axis__year {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-axis__text { font-size: 14.5px; font-weight: 500; }
+
+/* ---------- 7. 卡片 ---------- */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  transition: transform 0.2s ease, box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: #dcdfe5;
+}
+
+.card--flat:hover { transform: none; box-shadow: var(--shadow-sm); }
+
+.card__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  font-size: 19px;
+  margin-bottom: 16px;
+  background: var(--bg-soft);
+}
+
+.card__icon--cn { background: var(--cn-soft); }
+.card__icon--world { background: var(--world-soft); }
+
+.card__title { font-size: 17.5px; margin-bottom: 8px; }
+
+.card__text {
+  font-size: 14.5px;
+  color: var(--ink-2);
+  flex: 1;
+}
+
+.card__meta {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-2);
+  font-size: 12.5px;
+  color: var(--ink-3);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* ---------- 8. 标签 / 筛选 ---------- */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 7px 15px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.chip:hover { border-color: #c9cdd4; color: var(--ink); }
+
+.chip.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+  font-weight: 600;
+}
+
+.chip--cn.is-active { background: var(--cn); border-color: var(--cn); }
+.chip--world.is-active { background: var(--world); border-color: var(--world); }
+
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.tag--cn { background: var(--cn-soft); color: var(--cn); }
+.tag--world { background: var(--world-soft); color: var(--world); }
+.tag--neutral { background: var(--bg-soft); color: var(--ink-2); }
+
+/* ---------- 9. 时间轴页 ---------- */
+.tl-toolbar {
+  position: sticky;
+  top: var(--header-h);
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid var(--line);
+  padding: 14px 0;
+}
+
+.tl-toolbar__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  justify-content: space-between;
+}
+
+.tl-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tl-search {
+  position: relative;
+  min-width: 180px;
+}
+
+.tl-search input {
+  width: 100%;
+  padding: 8px 14px 8px 34px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.16s ease;
+}
+
+.tl-search input:focus { border-color: var(--ink-3); }
+
+.tl-search::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translateY(-50%);
+  border: 1.6px solid var(--ink-3);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.tl-search::after {
+  content: "";
+  position: absolute;
+  left: 23px;
+  top: calc(50% + 5px);
+  width: 5px;
+  height: 1.6px;
+  background: var(--ink-3);
+  transform: rotate(45deg);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.tl-switch {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: #fff;
+}
+
+.tl-switch button {
+  border: 0;
+  background: transparent;
+  padding: 6px 15px;
+  border-radius: var(--radius-pill);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.tl-switch button.is-active {
+  background: var(--ink);
+  color: #fff;
+  font-weight: 600;
+}
+
+.tl-count {
+  font-size: 13px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.era {
+  padding: 40px 0 8px;
+  scroll-margin-top: 140px;
+}
+
+.era__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 26px;
+  border-bottom: 1px solid var(--line);
+}
+
+.era__name { font-size: 20px; }
+
+.era__range {
+  font-size: 13px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.era__count {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* 并排视图 */
+.era__split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2px minmax(0, 1fr);
+  gap: 0 26px;
+}
+
+.tl-col { min-width: 0; }
+
+.tl-col__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+}
+
+.tl-col__head--cn { color: var(--cn); }
+.tl-col__head--world { color: var(--world); }
+
+.tl-col__head i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: block;
+}
+
+.tl-col__head--cn i { background: var(--cn); }
+.tl-col__head--world i { background: var(--world); }
+
+.tl-axis {
+  background: linear-gradient(
+    to bottom,
+    rgba(231, 233, 237, 0) 0%,
+    var(--line) 4%,
+    var(--line) 96%,
+    rgba(231, 233, 237, 0) 100%
+  );
+  border-radius: 2px;
+}
+
+.tl-event {
+  position: relative;
+  padding: 13px 16px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  border: 1px solid var(--line);
+  margin-bottom: 10px;
+  transition: all 0.18s ease;
+}
+
+.tl-event:hover {
+  border-color: #d3d7de;
+  box-shadow: var(--shadow-sm);
+  transform: translateX(2px);
+}
+
+.tl-event__year {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.tl-event--cn .tl-event__year { color: var(--cn); }
+.tl-event--world .tl-event__year { color: var(--world); }
+
+.tl-event__title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 3px 0 4px;
+  line-height: 1.5;
+}
+
+.tl-event__desc {
+  font-size: 13.5px;
+  color: var(--ink-2);
+  line-height: 1.68;
+}
+
+.tl-event--cn { border-left: 3px solid var(--cn-line); }
+.tl-event--world { border-left: 3px solid var(--world-line); }
+
+/* 合并视图 */
+.tl-merged { position: relative; padding-left: 26px; }
+
+.tl-merged::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: var(--line);
+  border-radius: 2px;
+}
+
+.tl-merged .tl-event::before {
+  content: "";
+  position: absolute;
+  left: -26px;
+  top: 20px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--ink-3);
+}
+
+.tl-merged .tl-event--cn::before { border-color: var(--cn); }
+.tl-merged .tl-event--world::before { border-color: var(--world); }
+
+.tl-empty {
+  padding: 60px 0;
+  text-align: center;
+  color: var(--ink-3);
+}
+
+/* ---------- 10. 测验页 ---------- */
+.quiz-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 26px;
+  margin-bottom: 16px;
+}
+
+.quiz-card__q {
+  display: flex;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.quiz-card__num {
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-soft);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+.quiz-options { display: grid; gap: 9px; }
+
+.quiz-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 15px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 14.5px;
+  line-height: 1.6;
+  transition: all 0.16s ease;
+  background: #fff;
+}
+
+.quiz-opt:hover { border-color: #c9cdd4; background: var(--bg-tint); }
+
+.quiz-opt input { display: none; }
+
+.quiz-opt__key {
+  flex: 0 0 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid #c9cdd4;
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+  margin-top: 1.5px;
+}
+
+.quiz-opt.is-correct {
+  border-color: #9dc9ae;
+  background: #f1f8f3;
+}
+
+.quiz-opt.is-correct .quiz-opt__key {
+  border-color: #3f8f5f;
+  background: #3f8f5f;
+  color: #fff;
+}
+
+.quiz-opt.is-wrong {
+  border-color: #e3b3ac;
+  background: #fdf2f0;
+}
+
+.quiz-opt.is-wrong .quiz-opt__key {
+  border-color: var(--cn);
+  background: var(--cn);
+  color: #fff;
+}
+
+.quiz-explain {
+  margin-top: 14px;
+  padding: 13px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  font-size: 13.5px;
+  color: var(--ink-2);
+  display: none;
+}
+
+.quiz-explain.is-visible { display: block; }
+
+.quiz-explain strong { color: var(--ink); }
+
+.quiz-result {
+  padding: 26px;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: #fff;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.quiz-result__score {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.quiz-result__score small {
+  font-size: 15px;
+  font-weight: 500;
+  opacity: 0.6;
+  margin-left: 4px;
+}
+
+/* ---------- 11. 表格 ---------- */
+.table-wrap {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  background: #fff;
+}
+
+table.tbl { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 560px; }
+
+table.tbl th,
+table.tbl td {
+  padding: 13px 18px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-2);
+  vertical-align: top;
+}
+
+table.tbl th {
+  background: var(--bg-soft);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+table.tbl tr:last-child td { border-bottom: 0; }
+table.tbl tbody tr:hover { background: var(--bg-tint); }
+
+/* ---------- 12. 资源列表 ---------- */
+.res-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  transition: all 0.18s ease;
+}
+
+.res-item:hover { border-color: #d3d7de; box-shadow: var(--shadow-sm); }
+
+.res-item__no {
+  flex: 0 0 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--bg-soft);
+  color: var(--ink-2);
+}
+
+.res-item__body { flex: 1; min-width: 0; }
+
+.res-item__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.res-item__text { font-size: 14px; color: var(--ink-2); }
+
+/* ---------- 13. 时间轴导航（侧栏/置顶） ---------- */
+.era-nav {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.era-nav::-webkit-scrollbar { display: none; }
+
+.era-nav a {
+  flex: 0 0 auto;
+  padding: 6px 13px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.era-nav a:hover { border-color: #c9cdd4; color: var(--ink); }
+
+/* ---------- 14. 页脚 ---------- */
+.site-footer {
+  border-top: 1px solid var(--line);
+  background: var(--bg-soft);
+  padding: 46px 0 30px;
+  margin-top: 0;
+}
+
+.site-footer__grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr;
+  gap: 36px;
+  margin-bottom: 34px;
+}
+
+.site-footer__title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+  margin-bottom: 14px;
+}
+
+.site-footer__list { display: grid; gap: 9px; }
+
+.site-footer__list a {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.site-footer__list a:hover { color: var(--ink); }
+
+.site-footer__bottom {
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* ---------- 15. 进入动画 ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal.is-in { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  html { scroll-behavior: auto; }
+  .card:hover, .tl-event:hover, .btn:hover { transform: none; }
+}
+
+/* ---------- 16. 页面头部（内页） ---------- */
+.page-head {
+  padding: 60px 0 40px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-tint);
+}
+
+.page-head__title {
+  font-size: clamp(26px, 4vw, 38px);
+  letter-spacing: -0.022em;
+  margin-bottom: 12px;
+}
+
+.page-head__desc {
+  color: var(--ink-2);
+  max-width: 62ch;
+  font-size: 16px;
+}
+
+.page-head__crumb {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin-bottom: 16px;
+}
+
+.page-head__crumb a:hover { color: var(--ink); }
+
+/* ---------- 17. 通用辅助 ---------- */
+.divider { height: 1px; background: var(--line); border: 0; margin: 40px 0; }
+
+.notice {
+  padding: 15px 18px;
+  border-radius: var(--radius-sm);
+  background: #fffbe9;
+  border: 1px solid #f2e4b3;
+  font-size: 13.5px;
+  color: #7a6320;
+}
+
+.kbd-list { display: grid; gap: 12px; }
+
+.kbd-list li {
+  display: flex;
+  gap: 11px;
+  font-size: 14.5px;
+  color: var(--ink-2);
+}
+
+.kbd-list li::before {
+  content: "";
+  flex: 0 0 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  margin-top: 11px;
+}
+
+/* ---------- 18. 响应式 ---------- */
+@media (max-width: 980px) {
+  .hero__grid { grid-template-columns: 1fr; gap: 40px; }
+  .hero__panel { order: 2; }
+  .grid--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .site-footer__grid { grid-template-columns: 1fr 1fr; }
+
+  .era__split {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .tl-axis { display: none; }
+  .tl-col { margin-bottom: 22px; }
+}
+
+@media (max-width: 720px) {
+  .section { padding: 56px 0; }
+  .hero { padding: 60px 0 52px; }
+
+  .nav__toggle { display: grid; }
+
+  .nav {
+    position: absolute;
+    top: var(--header-h);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+    padding: 10px 16px 16px;
+    display: none;
+    box-shadow: var(--shadow);
+  }
+
+  .nav.is-open { display: block; }
+
+  .nav__list {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+  }
+
+  .nav__link { padding: 12px 14px; border-radius: var(--radius-sm); }
+
+  .grid--2, .grid--3, .grid--4 { grid-template-columns: 1fr; }
+  .site-footer__grid { grid-template-columns: 1fr; gap: 26px; }
+
+  .hero__meta { gap: 14px 24px; }
+  .tl-toolbar { position: static; }
+  .era { scroll-margin-top: 16px; }
+}
+
+/* ---------- 19. 打印 ---------- */
+@media print {
+  .site-header, .site-footer, .tl-toolbar, .btn-row { display: none; }
+  body { font-size: 12pt; }
+  .card, .tl-event { break-inside: avoid; }
+}
+</style>
+<style>
+/* ---------- 单页版微调（站点版不需要，故不写进 style.css） ---------- */
+@media (max-width: 560px) {
+  #tl-print { padding: 8px 12px; font-size: 13px; }
+  .brand__sub { display: none; }
+  .site-header__inner { gap: 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ 顶栏 ============ -->
+<header class="site-header">
+  <div class="container site-header__inner">
+    <div class="brand">
+      <span class="brand__mark">史</span>
+      <span class="brand__text">
+        <span class="brand__name"><span data-site="teacherName">王老师</span> · 历史教学空间</span>
+        <span class="brand__sub">中外历史贯通</span>
+      </span>
+    </div>
+    <button class="btn btn--ghost btn--sm" type="button" id="tl-print">打印 / 导出 PDF</button>
+  </div>
+</header>
+
+<section class="page-head">
+  <div class="container">
+    <h1 class="page-head__title">中外历史贯通时间轴</h1>
+    <p class="page-head__desc">
+      左栏是中国史，右栏是同一时期的世界史。也可以切换成「按年贯通」视图，
+      把所有事件严格按年份排成一列，看清同时代的中外对照。
+    </p>
+  </div>
+</section>
+
+<!-- ============ 工具栏 ============ -->
+<div class="tl-toolbar">
+  <div class="container tl-toolbar__inner">
+    <div class="tl-toolbar__group">
+      <div class="chips" role="group" aria-label="区域筛选">
+        <button class="chip is-active" type="button" data-filter-region="all">全部</button>
+        <button class="chip chip--cn" type="button" data-filter-region="cn">中国史</button>
+        <button class="chip chip--world" type="button" data-filter-region="world">世界史</button>
+      </div>
+
+      <div class="tl-switch" role="group" aria-label="视图切换">
+        <button class="is-active" type="button" data-view-mode="split">并排对照</button>
+        <button type="button" data-view-mode="merged">按年贯通</button>
+      </div>
+    </div>
+
+    <div class="tl-toolbar__group">
+      <div class="tl-search">
+        <input id="tl-search" type="search" placeholder="搜索事件关键词…" aria-label="搜索历史事件">
+      </div>
+      <button class="chip" type="button" id="tl-reset">重置</button>
+      <span class="tl-count" id="tl-count">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 时代导航 ============ -->
+<div class="container" style="padding-top:22px;">
+  <nav class="era-nav" data-era-nav aria-label="时代快速跳转"></nav>
+</div>
+
+<!-- ============ 时间轴主体 ============ -->
+<main class="container" style="padding-bottom:60px;">
+  <div id="timeline-root"></div>
+
+  <noscript>
+    <div class="notice" style="margin-top:30px;">
+      时间轴需要浏览器 JavaScript 支持，请开启后重新打开本页。
+    </div>
+  </noscript>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="site-footer__bottom" style="border-top:0;padding-top:0;">
+      <span>© <span id="tl-year">2026</span> <span data-site="teacherName">王老师</span> · 历史教学空间</span>
+      <span>中外历史贯通时间轴 · 单页独立版</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+
+/* ---------- 单页版配置（独立文件，不依赖站点其他文件） ---------- */
+var SITE = {
+  "teacherName": "常熟市实验中学历史组",
+  "subject": "初中历史",
+  "tagline": "把历史讲成一条能看懂的时间线",
+  "since": 2003
+};
+
+(function () {
+  'use strict';
+
+  function apply() {
+    Array.prototype.forEach.call(
+      document.querySelectorAll('[data-site]'),
+      function (el) {
+        var key = el.getAttribute('data-site');
+        var fmt = el.getAttribute('data-site-format') || '{v}';
+        if (SITE[key] === undefined) return;
+        if (key === 'since') {
+          el.textContent = fmt
+            .replace('{v}', SITE[key])
+            .replace('{years}', String(new Date().getFullYear() - Number(SITE[key])));
+          return;
+        }
+        el.textContent = fmt.replace('{v}', SITE[key]);
+      }
+    );
+
+    var btn = document.getElementById('tl-print');
+    if (btn) btn.addEventListener('click', function () { window.print(); });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', apply);
+  } else {
+    apply();
+  }
+})();
+
+</script>
+<script>
+document.getElementById('tl-year').textContent = String(new Date().getFullYear());
+</script>
+<script>
+/* =========================================================
+   timeline-data.js — 中外历史贯通时间轴数据
+   region: 'cn' = 中国史   'world' = 世界史
+   year:   公元纪年（公元前用负数，如 -221 表示公元前221年）
+   时代分组由 ERAS 的 yearStart / yearEnd 自动匹配，无需手工指定
+   ========================================================= */
+
+const ERAS = [
+  { id: 'primitive',      name: '史前时期',            yearStart: -1700000, yearEnd: -2071, range: '约170万年前 — 约公元前2070年' },
+  { id: 'xia-shang-zhou', name: '夏商周',              yearStart: -2070,    yearEnd: -771,  range: '约公元前2070年 — 公元前771年' },
+  { id: 'spring-autumn',  name: '春秋战国',            yearStart: -770,     yearEnd: -222,  range: '公元前770年 — 公元前221年' },
+  { id: 'qin-han',        name: '秦汉',                yearStart: -221,     yearEnd: 220,   range: '公元前221年 — 公元220年' },
+  { id: 'three-kingdoms', name: '三国两晋南北朝',      yearStart: 221,      yearEnd: 580,   range: '公元220年 — 公元589年' },
+  { id: 'sui-tang',       name: '隋唐',                yearStart: 581,      yearEnd: 906,   range: '公元581年 — 公元907年' },
+  { id: 'song-yuan',      name: '辽宋夏金元',          yearStart: 907,      yearEnd: 1367,  range: '公元907年 — 公元1368年' },
+  { id: 'ming-qing',      name: '明清（鸦片战争前）',   yearStart: 1368,     yearEnd: 1839,  range: '公元1368年 — 公元1840年' },
+  { id: 'modern-early',   name: '近代中国（1840—1919）', yearStart: 1840,  yearEnd: 1918,  range: '公元1840年 — 公元1919年' },
+  { id: 'modern-late',    name: '新民主主义革命（1919—1949）', yearStart: 1919, yearEnd: 1948, range: '公元1919年 — 公元1949年' },
+  { id: 'contemporary',   name: '现代中国与当代世界',  yearStart: 1949,     yearEnd: 3000,  range: '公元1949年 — 至今' }
+];
+
+const TIMELINE_DATA = [
+  /* ========== 史前时期 ========== */
+  { year: -1700000, display: '约170万年前', region: 'cn', title: '元谋人', desc: '我国境内目前已确认的最早的古人类之一，发现于云南元谋。' },
+  { year: -700000, display: '约70万—20万年前', region: 'cn', title: '北京人', desc: '使用打制石器，会使用天然火并保存火种，过着群居生活。' },
+  { year: -6000, display: '约7000—6000年前', region: 'cn', title: '半坡与河姆渡遗址', desc: '南稻北粟，我国原始农耕文明的典型代表，出现磨制石器和陶器。' },
+  { year: -3000, display: '约5000年前', region: 'cn', title: '良渚古城与早期国家', desc: '长江下游出现大型水利工程与玉器礼制，被视为中华五千年文明的实证。' },
+  { year: -3500, display: '约公元前3500年', region: 'world', title: '古埃及与两河流域文明', desc: '尼罗河流域出现统一国家，两河流域产生楔形文字，人类进入文明时代。' },
+  { year: -1750, display: '约公元前18世纪', region: 'world', title: '《汉谟拉比法典》', desc: '古巴比伦王国颁布世界上现存最早的较为完备的成文法典。' },
+  { year: -1600, display: '约公元前1600年', region: 'world', title: '爱琴文明兴起', desc: '克里特与迈锡尼文明先后兴起，是古希腊文明的最早源头。' },
+
+  /* ========== 夏商周 ========== */
+  { year: -2070, display: '约公元前2070年', region: 'cn', title: '夏朝建立', desc: '禹建立夏朝，这是我国历史上第一个王朝，世袭制代替了禅让制，世袭制代替“天下为公”的禅让制。' },
+  { year: -1600, display: '约公元前1600年', region: 'cn', title: '商朝建立与甲骨文', desc: '汤灭夏建商，商朝留下我国已发现的年代最早、体系较为完整的文字——甲骨文。' },
+  { year: -1046, display: '公元前1046年', region: 'cn', title: '武王伐纣，西周建立', desc: '牧野之战灭商，西周推行分封制与礼乐制度，形成“普天之下，莫非王土”的统治格局。' },
+  { year: -776, display: '公元前776年', region: 'world', title: '古希腊第一届奥运会', desc: '古希腊各城邦在奥林匹亚举行竞技赛会，成为古希腊城邦文化的象征。' },
+  { year: -771, display: '公元前771年', region: 'cn', title: '西周灭亡，平王东迁', desc: '犬戎攻破镐京，周平王迁都洛邑，东周开始，周王室衰微、诸侯崛起。' },
+
+  /* ========== 春秋战国 ========== */
+  { year: -770, display: '公元前770年', region: 'cn', title: '春秋时期开始', desc: '铁制农具和牛耕出现并推广，社会生产力显著提高，井田制逐步瓦解。' },
+  { year: -679, display: '公元前7世纪', region: 'cn', title: '齐桓公称霸', desc: '齐桓公任用管仲改革，打出“尊王攘夷”旗号，成为春秋时期第一个霸主。' },
+  { year: -594, display: '公元前594年', region: 'world', title: '雅典梭伦改革', desc: '按财产多寡划分公民等级，为雅典民主政治奠定了基础。' },
+  { year: -551, display: '公元前551年', region: 'cn', title: '孔子诞生', desc: '儒家学派创始人，提出“仁”的学说，主张“为政以德”，创办私学、有教无类。' },
+  { year: -509, display: '公元前509年', region: 'world', title: '罗马共和国建立', desc: '罗马废除君主制，建立由元老院、执政官和公民大会构成的共和政体。' },
+  { year: -443, display: '公元前5世纪', region: 'world', title: '伯里克利时期的雅典', desc: '雅典民主政治发展到高峰，公民大会成为最高权力机构，但妇女、奴隶和外邦人没有政治权利。' },
+  { year: -356, display: '公元前356年', region: 'cn', title: '商鞅变法', desc: '秦国推行奖励耕战、确立县制、废井田开阡陌等措施，国力大为增强，成为最强盛的诸侯国。' },
+  { year: -334, display: '公元前334年', region: 'world', title: '亚历山大东征', desc: '马其顿国王亚历山大东征，建立起地跨欧亚非三洲的大帝国，促进东西方文化交流。' },
+  { year: -256, display: '公元前256年', region: 'cn', title: '都江堰建成', desc: '秦国蜀郡郡守李冰主持修建都江堰，使成都平原成为“天府之国”，至今仍发挥作用。' },
+
+  /* ========== 秦汉 ========== */
+  { year: -221, display: '公元前221年', region: 'cn', title: '秦灭六国，统一中国', desc: '秦王嬴政完成统一，建立我国历史上第一个统一的多民族的封建国家，推行郡县制、统一文字与度量衡。' },
+  { year: -209, display: '公元前209年', region: 'cn', title: '陈胜、吴广起义', desc: '中国历史上第一次大规模的农民起义，沉重打击了秦朝统治。' },
+  { year: -202, display: '公元前202年', region: 'cn', title: '西汉建立', desc: '刘邦建立汉朝，定都长安，推行休养生息政策，社会经济逐步恢复。' },
+  { year: -138, display: '公元前138年', region: 'cn', title: '张骞出使西域', desc: '沟通了汉朝与西域的联系，为丝绸之路的开辟奠定基础。' },
+  { year: -60, display: '公元前60年', region: 'cn', title: '西汉设置西域都护', desc: '标志着今新疆地区正式归属中央政权管辖。' },
+  { year: -27, display: '公元前27年', region: 'world', title: '罗马帝国建立', desc: '屋大维取得“奥古斯都”称号，罗马由共和国转变为帝国。' },
+  { year: 1, display: '公元1世纪', region: 'world', title: '基督教产生', desc: '基督教在巴勒斯坦地区产生，4世纪末被罗马帝国定为国教。' },
+  { year: 25, display: '公元25年', region: 'cn', title: '东汉建立', desc: '刘秀建立东汉，定都洛阳，出现“光武中兴”的局面。' },
+  { year: 105, display: '公元105年', region: 'cn', title: '蔡伦改进造纸术', desc: '造纸术的改进使纸张得以普及，后传播到世界各地，深刻影响人类文明进程。' },
+  { year: 184, display: '公元184年', region: 'cn', title: '黄巾起义', desc: '张角领导的农民起义，使东汉统治名存实亡，地方军阀势力坐大。' },
+  { year: 200, display: '公元200年', region: 'cn', title: '官渡之战', desc: '曹操以少胜多打败袁绍，为统一北方奠定基础。' },
+  { year: 208, display: '公元208年', region: 'cn', title: '赤壁之战', desc: '孙刘联军以少胜多击败曹操，为三国鼎立局面的形成奠定基础。' },
+
+  /* ========== 三国两晋南北朝 ========== */
+  { year: 220, display: '公元220年', region: 'cn', title: '曹丕称帝，东汉灭亡', desc: '三国鼎立局面逐步形成：魏据北方、蜀汉据西南、吴据江东。' },
+  { year: 280, display: '公元280年', region: 'cn', title: '西晋统一全国', desc: '西晋灭吴，短暂结束分裂局面，但统治腐朽，很快陷入内乱。' },
+  { year: 317, display: '公元317年', region: 'cn', title: '东晋建立与江南开发', desc: '北方人口大量南迁，带来劳动力与先进技术，江南地区得到迅速开发。' },
+  { year: 383, display: '公元383年', region: 'cn', title: '淝水之战', desc: '东晋以少胜多击败前秦，前秦瓦解，北方重新陷入分裂。' },
+  { year: 395, display: '公元395年', region: 'world', title: '罗马帝国分裂', desc: '罗马帝国分裂为西罗马帝国和东罗马帝国（拜占庭帝国）。' },
+  { year: 439, display: '公元439年', region: 'cn', title: '北魏统一北方', desc: '北魏结束十六国以来的分裂局面，北方进入相对稳定时期。' },
+  { year: 476, display: '公元476年', region: 'world', title: '西罗马帝国灭亡', desc: '西罗马帝国在日耳曼人的打击下灭亡，标志西欧进入封建社会。' },
+  { year: 481, display: '公元481年', region: 'world', title: '法兰克王国建立', desc: '克洛维建立法兰克王国，是西欧早期封建国家的重要代表。' },
+  { year: 494, display: '公元494年', region: 'cn', title: '北魏孝文帝改革', desc: '迁都洛阳，推行说汉语、穿汉服、改汉姓、通婚姻等措施，促进了民族交融。' },
+  { year: 529, display: '公元6世纪', region: 'world', title: '《查士丁尼法典》编纂', desc: '东罗马帝国皇帝查士丁尼组织编纂法典，成为后世欧洲法学的渊源。' },
+  { year: 622, display: '公元622年', region: 'world', title: '阿拉伯帝国兴起', desc: '穆罕默德在麦地那建立政教合一的政权，阿拉伯半岛逐步统一并向外扩张。' },
+
+  /* ========== 隋唐 ========== */
+  { year: 581, display: '公元581年', region: 'cn', title: '隋朝建立', desc: '杨坚夺取北周政权建立隋朝，定都长安，后改称大兴。' },
+  { year: 589, display: '公元589年', region: 'cn', title: '隋朝统一南北', desc: '隋灭陈，结束了自西晋末年以来近三百年的分裂局面。' },
+  { year: 605, display: '公元605年', region: 'cn', title: '开凿大运河', desc: '以洛阳为中心，北抵涿郡、南至余杭，加强了南北经济文化交流。' },
+  { year: 618, display: '公元618年', region: 'cn', title: '唐朝建立', desc: '李渊建立唐朝，定都长安，后经贞观、开元时期走向鼎盛。' },
+  { year: 627, display: '公元627年', region: 'cn', title: '贞观之治', desc: '唐太宗虚心纳谏、轻徭薄赋、完善三省六部制与科举制，出现政治清明的局面。' },
+  { year: 641, display: '公元641年', region: 'cn', title: '文成公主入藏', desc: '唐蕃和亲促进了吐蕃经济文化的发展，也增进了汉藏友好关系。' },
+  { year: 646, display: '公元646年', region: 'world', title: '日本大化改新', desc: '日本效仿唐朝制度进行改革，使日本发展成为一个中央集权的封建国家。' },
+  { year: 713, display: '公元713年', region: 'cn', title: '开元盛世', desc: '唐玄宗前期励精图治，唐朝进入鼎盛时期，国力空前强盛。' },
+  { year: 755, display: '公元755年', region: 'cn', title: '安史之乱爆发', desc: '唐朝由盛转衰的转折点，此后藩镇割据、社会动荡。' },
+  { year: 800, display: '公元800年', region: 'world', title: '查理曼帝国', desc: '查理被教皇加冕为“罗马人的皇帝”，西欧形成查理曼帝国，后分裂为法、德、意雏形。' },
+  { year: 875, display: '公元875年', region: 'cn', title: '黄巢起义', desc: '沉重打击了唐朝统治，唐朝从此名存实亡。' },
+
+  /* ========== 辽宋夏金元 ========== */
+  { year: 907, display: '公元907年', region: 'cn', title: '唐朝灭亡，五代十国开始', desc: '藩镇割据势力膨胀，中原进入五代十国的分裂时期。' },
+  { year: 960, display: '公元960年', region: 'cn', title: '北宋建立', desc: '赵匡胤建立宋朝，定都开封，推行重文轻武、分割相权、设转运使等加强中央集权的措施。' },
+  { year: 1005, display: '公元1005年', region: 'cn', title: '澶渊之盟', desc: '宋辽订立和约，此后边境相对安定，双方贸易往来频繁。' },
+  { year: 1045, display: '公元11世纪', region: 'cn', title: '毕昇发明活字印刷术', desc: '活字印刷术大大提高印刷效率，后与指南针、火药一同传播到世界各地。' },
+  { year: 1069, display: '公元1069年', region: 'cn', title: '王安石变法', desc: '推行青苗法、募役法、方田均税法等，力图富国强兵，但最终失败。' },
+  { year: 1096, display: '公元1096年', region: 'world', title: '十字军东征开始', desc: '西欧封建主与教会发动的宗教性军事远征，客观上促进了东西方交流。' },
+  { year: 1127, display: '公元1127年', region: 'cn', title: '靖康之变，南宋建立', desc: '北宋灭亡，赵构建立南宋；此后岳飞抗金，宋金形成对峙局面。' },
+  { year: 1206, display: '公元1206年', region: 'cn', title: '成吉思汗统一蒙古', desc: '铁木真被推举为大汗，建立蒙古政权，随后展开大规模扩张。' },
+  { year: 1215, display: '公元1215年', region: 'world', title: '英国《大宪章》', desc: '限制王权、保障贵族与市民权利，是英国宪政传统的重要文件。' },
+  { year: 1271, display: '公元1271年', region: 'cn', title: '忽必烈建立元朝', desc: '定都大都，后灭南宋统一全国，创立行省制度，设宣政院管理西藏。' },
+  { year: 1310, display: '公元14世纪初', region: 'world', title: '意大利文艺复兴萌芽', desc: '但丁创作《神曲》，人文主义思潮兴起，欧洲思想文化逐步冲破教会束缚。' },
+
+  /* ========== 明清（鸦片战争前） ========== */
+  { year: 1368, display: '公元1368年', region: 'cn', title: '明朝建立', desc: '朱元璋建立明朝，定都应天府，后废丞相、设内阁，权分六部。' },
+  { year: 1405, display: '公元1405年', region: 'cn', title: '郑和下西洋', desc: '七下西洋，最远到达非洲东海岸和红海沿岸，是世界航海史上的壮举。' },
+  { year: 1453, display: '公元1453年', region: 'world', title: '拜占庭帝国灭亡', desc: '奥斯曼帝国攻占君士坦丁堡，西欧通往东方的商路受阻，成为新航路开辟的重要诱因。' },
+  { year: 1492, display: '公元1492年', region: 'world', title: '哥伦布到达美洲', desc: '在西班牙支持下横渡大西洋，开辟了通往美洲的新航路。' },
+  { year: 1498, display: '公元1498年', region: 'world', title: '达·伽马到达印度', desc: '开辟了从欧洲绕过非洲南端通往印度的新航路。' },
+  { year: 1519, display: '公元1519年', region: 'world', title: '麦哲伦船队环球航行', desc: '首次完成环球航行，证明地球是圆的，世界开始连为一个整体。' },
+  { year: 1543, display: '公元1543年', region: 'world', title: '哥白尼《天体运行论》', desc: '提出日心说，动摇了教会的神学世界观，近代自然科学开始兴起。' },
+  { year: 1553, display: '公元16世纪', region: 'cn', title: '葡萄牙人租居澳门', desc: '西方殖民者开始在中国沿海活动，中国面临来自海上的新挑战。' },
+  { year: 1629, display: '公元1629年', region: 'cn', title: '李自成起义', desc: '明末农民起义发展壮大，提出“均田免赋”的口号，得到广泛拥护。' },
+  { year: 1640, display: '公元1640年', region: 'world', title: '英国资产阶级革命', desc: '议会与国王冲突激化，揭开资产阶级革命序幕，推动世界历史进入近代。' },
+  { year: 1644, display: '公元1644年', region: 'cn', title: '明朝灭亡，清军入关', desc: '李自成攻入北京，明朝灭亡；随后清军入关，逐步确立对全国的统治。' },
+  { year: 1662, display: '公元1662年', region: 'cn', title: '郑成功收复台湾（中国台湾）', desc: '驱逐荷兰殖民者，台湾（中国台湾）重新回到祖国怀抱。' },
+  { year: 1684, display: '公元1684年', region: 'cn', title: '清朝设置台湾府', desc: '台湾府隶属福建省，加强了中央政府对台湾地区的管辖。' },
+  { year: 1689, display: '公元1689年', region: 'cn', title: '中俄《尼布楚条约》', desc: '划定中俄东段边界，是中国第一个具有近代意义的边界条约。' },
+  { year: 1689, display: '公元1689年', region: 'world', title: '英国《权利法案》', desc: '确立议会主权，君主立宪制在英国逐步确立。' },
+  { year: 1727, display: '公元1727年', region: 'cn', title: '清朝设置驻藏大臣', desc: '代表中央政府与达赖、班禅共同管理西藏事务，加强对西藏的管辖。' },
+  { year: 1757, display: '公元1757年', region: 'cn', title: '清朝实行闭关政策', desc: '只留广州一处对外通商，中国逐渐落后于世界发展潮流。' },
+  { year: 1776, display: '公元1776年', region: 'world', title: '美国独立战争与《独立宣言》', desc: '北美十三个殖民地宣布独立，建立美利坚合众国。' },
+  { year: 1785, display: '公元1785年', region: 'world', title: '瓦特改良蒸汽机', desc: '蒸汽机广泛应用于生产，人类进入“蒸汽时代”，工业革命加速推进。' },
+  { year: 1789, display: '公元1789年', region: 'world', title: '法国大革命爆发', desc: '攻占巴士底狱，颁布《人权宣言》，摧毁法国封建专制统治。' },
+  { year: 1804, display: '公元1804年', region: 'world', title: '拿破仑建立法兰西第一帝国', desc: '颁布《拿破仑法典》，巩固了资产阶级革命成果，也影响了欧洲格局。' },
+  { year: 1839, display: '公元1839年', region: 'cn', title: '林则徐虎门销烟', desc: '销毁鸦片二百多万斤，显示了中华民族反抗外来侵略的坚强意志。' },
+
+  /* ========== 近代中国 1840—1919 ========== */
+  { year: 1840, display: '公元1840年', region: 'cn', title: '鸦片战争爆发', desc: '英国发动侵华战争，中国开始被卷入资本主义世界市场。' },
+  { year: 1842, display: '公元1842年', region: 'cn', title: '《南京条约》签订', desc: '中国近代史上第一个不平等条约，中国开始沦为半殖民地半封建社会。' },
+  { year: 1848, display: '公元1848年', region: 'world', title: '《共产党宣言》发表', desc: '马克思、恩格斯创立科学社会主义，国际共产主义运动兴起。' },
+  { year: 1851, display: '公元1851年', region: 'cn', title: '太平天国运动爆发', desc: '中国历史上规模最宏大的一次农民战争，沉重打击了清朝统治和外国侵略势力。' },
+  { year: 1856, display: '公元1856年', region: 'cn', title: '第二次鸦片战争爆发', desc: '英法联军侵华，中国半殖民地化程度进一步加深。' },
+  { year: 1860, display: '公元1860年', region: 'cn', title: '英法联军火烧圆明园', desc: '列强掠夺并焚毁圆明园，是中国近代史上的文化浩劫。' },
+  { year: 1861, display: '公元1861年', region: 'world', title: '俄国农奴制改革与美国内战', desc: '俄国自上而下改革走上资本主义道路；美国南北战争维护了国家统一。' },
+  { year: 1864, display: '公元1864年', region: 'cn', title: '天京陷落，太平天国失败', desc: '太平天国运动失败，但其反封建反侵略的斗争精神影响深远。' },
+  { year: 1868, display: '公元1868年', region: 'world', title: '日本明治维新', desc: '日本全面学习西方，走上发展资本主义的道路，逐渐成为亚洲强国。' },
+  { year: 1871, display: '公元1871年', region: 'world', title: '巴黎公社', desc: '世界上第一个无产阶级政权的伟大尝试。' },
+  { year: 1884, display: '公元1884年', region: 'cn', title: '中法战争', desc: '中国不败而败，边疆危机进一步加深，促发对海防与边疆治理的重视。' },
+  { year: 1894, display: '公元1894年', region: 'cn', title: '甲午中日战争爆发', desc: '黄海海战中邓世昌壮烈殉国，北洋舰队最终全军覆没。' },
+  { year: 1895, display: '公元1895年', region: 'cn', title: '《马关条约》签订', desc: '大大加深了中国的半殖民地化程度，列强掀起瓜分中国的狂潮。' },
+  { year: 1898, display: '公元1898年', region: 'cn', title: '戊戌变法', desc: '康有为、梁启超等推动维新变法，虽仅百餘日即失败，但在思想文化上影响深远。' },
+  { year: 1900, display: '公元1900年', region: 'cn', title: '八国联军侵华', desc: '义和团运动高涨，八国联军攻占北京，中国陷入空前灾难。' },
+  { year: 1901, display: '公元1901年', region: 'cn', title: '《辛丑条约》签订', desc: '中国完全沦为半殖民地半封建社会，清政府成为“洋人的朝廷”。' },
+  { year: 1905, display: '公元1905年', region: 'cn', title: '中国同盟会成立', desc: '孙中山提出“三民主义”，推动了全国革命运动的发展。' },
+  { year: 1911, display: '公元1911年', region: 'cn', title: '辛亥革命', desc: '武昌起义爆发，推翻清朝统治，结束了两千多年的君主专制制度。' },
+  { year: 1912, display: '公元1912年', region: 'cn', title: '中华民国成立，清帝退位', desc: '亚洲第一个共和制国家诞生，民主共和观念深入人心。' },
+  { year: 1914, display: '公元1914年', region: 'world', title: '第一次世界大战爆发', desc: '萨拉热窝事件成为导火索，大战给人类带来深重灾难。' },
+  { year: 1915, display: '公元1915年', region: 'cn', title: '新文化运动兴起', desc: '陈独秀创办《青年杂志》，高举民主与科学两面大旗，掀起思想解放潮流。' },
+  { year: 1917, display: '公元1917年', region: 'world', title: '俄国十月革命', desc: '世界上第一个社会主义国家诞生，开辟了人类历史的新纪元。' },
+  { year: 1918, display: '公元1918年', region: 'cn', title: '李大钊传播马克思主义', desc: '发表《庶民的胜利》等文章，马克思主义开始在中国广泛传播。' },
+
+  /* ========== 1919—1949 ========== */
+  { year: 1919, display: '公元1919年', region: 'cn', title: '五四运动', desc: '彻底反帝反封建的爱国革命运动，标志着中国新民主主义革命的开端。' },
+  { year: 1919, display: '公元1919年', region: 'world', title: '巴黎和会与《凡尔赛条约》', desc: '战胜国重新瓜分世界，埋下新的战争隐患。' },
+  { year: 1921, display: '公元1921年', region: 'cn', title: '中国共产党成立', desc: '中国革命的面貌从此焕然一新，中国人民有了坚强的领导核心。' },
+  { year: 1922, display: '公元1922年', region: 'world', title: '华盛顿会议', desc: '调整帝国主义在东亚太平洋地区的关系，形成“凡尔赛—华盛顿体系”。' },
+  { year: 1924, display: '公元1924年', region: 'cn', title: '国共第一次合作', desc: '黄埔军校创办，国民革命运动迅速高涨，掀起北伐战争。' },
+  { year: 1927, display: '公元1927年', region: 'cn', title: '南昌起义与井冈山根据地', desc: '打响武装反抗国民党反动统治的第一枪，开辟“农村包围城市”的革命道路。' },
+  { year: 1929, display: '公元1929年', region: 'world', title: '资本主义世界经济大危机', desc: '从美国开始席卷全球，各国纷纷寻求出路，法西斯势力乘机抬头。' },
+  { year: 1931, display: '公元1931年', region: 'cn', title: '九一八事变', desc: '日本发动侵华战争，中国人民的局部抗战由此开始。' },
+  { year: 1933, display: '公元1933年', region: 'world', title: '罗斯福新政与纳粹上台', desc: '美国加强国家对经济的干预；德国希特勒上台，欧洲战争策源地形成。' },
+  { year: 1934, display: '公元1934年', region: 'cn', title: '红军长征开始', desc: '红军被迫进行战略转移，1936年三大主力会师，长征胜利结束。' },
+  { year: 1936, display: '公元1936年', region: 'cn', title: '西安事变', desc: '事变的和平解决，标志着十年内战基本结束、抗日民族统一战线初步形成。' },
+  { year: 1937, display: '公元1937年', region: 'cn', title: '七七事变，全民族抗战开始', desc: '日军发动全面侵华战争，南京大屠杀造成三十多万同胞遇难。' },
+  { year: 1939, display: '公元1939年', region: 'world', title: '第二次世界大战全面爆发', desc: '德国突袭波兰，英法对德宣战，大战全面爆发。' },
+  { year: 1941, display: '公元1941年', region: 'world', title: '珍珠港事件', desc: '日本偷袭珍珠港，太平洋战争爆发，二战达到最大规模。' },
+  { year: 1942, display: '公元1942年', region: 'world', title: '世界反法西斯同盟形成', desc: '《联合国家宣言》签署，为最终战胜法西斯奠定基础。' },
+  { year: 1945, display: '公元1945年', region: 'cn', title: '抗日战争胜利', desc: '中共七大召开，抗战胜利是近代以来中国反抗外敌入侵的第一次完全胜利。' },
+  { year: 1945, display: '公元1945年', region: 'world', title: '二战结束，联合国成立', desc: '雅尔塔体系确立，联合国成立，战后国际秩序初步形成。' },
+  { year: 1946, display: '公元1946年', region: 'cn', title: '全面内战爆发', desc: '国民党进攻中原解放区，人民解放战争开始。' },
+  { year: 1947, display: '公元1947年', region: 'world', title: '杜鲁门主义，冷战开始', desc: '美苏战时同盟关系破裂，世界进入长达四十余年的冷战格局。' },
+  { year: 1948, display: '公元1948年', region: 'cn', title: '三大战役开始', desc: '辽沈、淮海、平津战役基本摧毁国民党军队主力，为解放全国奠定基础。' },
+
+  /* ========== 1949 至今 ========== */
+  { year: 1949, display: '公元1949年', region: 'cn', title: '中华人民共和国成立', desc: '中国人民从此站起来了，开辟了中国历史的新纪元。' },
+  { year: 1949, display: '公元1949年', region: 'world', title: '北大西洋公约组织成立', desc: '以美国为首的西方军事政治集团形成，冷战对峙加剧。' },
+  { year: 1950, display: '公元1950年', region: 'cn', title: '抗美援朝与土地改革', desc: '抗美援朝战争保家卫国；土地改革彻底废除了封建土地制度。' },
+  { year: 1953, display: '公元1953年', region: 'cn', title: '第一个五年计划开始', desc: '我国开始有计划地进行社会主义工业化建设，优先发展重工业。' },
+  { year: 1954, display: '公元1954年', region: 'cn', title: '第一届全国人民代表大会', desc: '通过第一部《中华人民共和国宪法》，确立人民代表大会制度。' },
+  { year: 1955, display: '公元1955年', region: 'world', title: '华沙条约组织成立', desc: '苏联与东欧国家结成军事同盟，两极格局正式形成。' },
+  { year: 1956, display: '公元1956年', region: 'cn', title: '三大改造完成', desc: '社会主义基本制度在我国建立，中国进入社会主义初级阶段。' },
+  { year: 1964, display: '公元1964年', region: 'cn', title: '第一颗原子弹爆炸成功', desc: '打破了西方国家的核垄断，极大提高了我国的国际地位。' },
+  { year: 1967, display: '公元1967年', region: 'world', title: '欧洲共同体成立', desc: '西欧国家走向联合，推动了欧洲一体化进程。' },
+  { year: 1971, display: '公元1971年', region: 'cn', title: '恢复在联合国的合法席位', desc: '中国成为联合国安理会常任理事国，外交取得重大突破。' },
+  { year: 1972, display: '公元1972年', region: 'cn', title: '中美、中日关系正常化', desc: '尼克松访华，中日建交，中国外交打开新局面。' },
+  { year: 1978, display: '公元1978年', region: 'cn', title: '十一届三中全会，改革开放', desc: '实现新中国成立以来党的历史上具有深远意义的伟大转折。' },
+  { year: 1980, display: '公元1980年', region: 'cn', title: '设立深圳等经济特区', desc: '经济特区成为对外开放的“窗口”和“试验田”。' },
+  { year: 1991, display: '公元1991年', region: 'world', title: '苏联解体，冷战结束', desc: '两极格局终结，世界朝着多极化方向发展。' },
+  { year: 1993, display: '公元1993年', region: 'world', title: '欧洲联盟成立', desc: '欧洲一体化进入新阶段，成为世界多极化趋势中的重要力量。' },
+  { year: 1995, display: '公元1995年', region: 'world', title: '世界贸易组织成立', desc: '经济全球化进程加速，世界各国的经济联系日益紧密。' },
+  { year: 1997, display: '公元1997年', region: 'cn', title: '中国香港回归祖国', desc: '“一国两制”伟大构想的成功实践，洗雪了百年国耻。' },
+  { year: 1999, display: '公元1999年', region: 'cn', title: '中国澳门回归祖国', desc: '标志着中国人民在完成祖国统一大业道路上迈出重要一步。' },
+  { year: 2001, display: '公元2001年', region: 'cn', title: '中国加入世界贸易组织', desc: '为中国经济融入世界提供了更广阔的舞台。' },
+  { year: 2008, display: '公元2008年', region: 'cn', title: '北京举办第29届夏季奥运会', desc: '向世界展示了改革开放后中国的巨大成就。' },
+  { year: 2013, display: '公元2013年', region: 'cn', title: '共建“一带一路”倡议提出', desc: '传承古丝绸之路精神，推动沿线国家共同发展。' }
+];
+
+/* ---------- 站点统计数字自动回填 ----------
+   页面中任意元素加 data-event-count / data-era-count / data-cn-count
+   / data-world-count 即可自动显示统计值，无需手工维护。 */
+(function () {
+  'use strict';
+
+  var stats = {
+    eventCount: TIMELINE_DATA.length,
+    eraCount: ERAS.length,
+    cnCount: TIMELINE_DATA.filter(function (e) { return e.region !== 'world'; }).length,
+    worldCount: TIMELINE_DATA.filter(function (e) { return e.region === 'world'; }).length
+  };
+
+  function fill() {
+    Object.keys(stats).forEach(function (key) {
+      var attr = 'data-' +
+        key.replace(/[A-Z]/g, function (m) { return '-' + m.toLowerCase(); });
+      Array.prototype.forEach.call(document.querySelectorAll('[' + attr + ']'), function (el) {
+        el.textContent = String(stats[key]);
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fill);
+  } else {
+    fill();
+  }
+})();
+
+</script>
+<script>
+/* =========================================================
+   timeline.js — 中外历史贯通时间轴渲染
+   依赖：timeline-data.js（ERAS / TIMELINE_DATA）
+   ========================================================= */
+
+(function () {
+  'use strict';
+
+  var state = {
+    region: 'all',   // all | cn | world
+    view: 'split',   // split（并排对照） | merged（按年贯通）
+    keyword: ''
+  };
+
+  /* ---------- 工具 ---------- */
+
+  // 根据年份把事件归入时代
+  function findEra(year) {
+    for (var i = 0; i < ERAS.length; i++) {
+      var e = ERAS[i];
+      if (year >= e.yearStart && year <= e.yearEnd) return e;
+    }
+    return null;
+  }
+
+  function eraRangeText(era) {
+    return era.range;
+  }
+
+  function matchKeyword(ev) {
+    if (!state.keyword) return true;
+    var kw = state.keyword.toLowerCase();
+    return (
+      (ev.title || '').toLowerCase().indexOf(kw) > -1 ||
+      (ev.desc || '').toLowerCase().indexOf(kw) > -1 ||
+      (ev.display || '').toLowerCase().indexOf(kw) > -1
+    );
+  }
+
+  function matchRegion(ev) {
+    if (state.region === 'all') return true;
+    return ev.region === state.region;
+  }
+
+  function esc(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ---------- 数据整理 ---------- */
+
+  // 全部事件补上 era 字段并排序
+  var ALL_EVENTS = (function () {
+    return TIMELINE_DATA.map(function (ev) {
+      var era = findEra(ev.year);
+      return {
+        year: ev.year,
+        display: ev.display || String(ev.year),
+        region: ev.region === 'world' ? 'world' : 'cn',
+        title: ev.title,
+        desc: ev.desc || '',
+        eraId: era ? era.id : 'other'
+      };
+    }).sort(function (a, b) {
+      if (a.year !== b.year) return a.year - b.year;
+      if (a.region === b.region) return 0;
+      return a.region === 'cn' ? -1 : 1;
+    });
+  })();
+
+  /* ---------- 视图渲染 ---------- */
+
+  function eventHTML(ev) {
+    return (
+      '<article class="tl-event tl-event--' + ev.region + '">' +
+        '<div class="tl-event__year">' + esc(ev.display) + '</div>' +
+        '<h4 class="tl-event__title">' + esc(ev.title) + '</h4>' +
+        '<p class="tl-event__desc">' + esc(ev.desc) + '</p>' +
+      '</article>'
+    );
+  }
+
+  function splitViewHTML(era, list) {
+    var cnList = list.filter(function (e) { return e.region === 'cn'; });
+    var worldList = list.filter(function (e) { return e.region === 'world'; });
+
+    function colHTML(cls, label, arr) {
+      var head = '';
+      if (state.region === 'all') {
+        head =
+          '<div class="tl-col__head tl-col__head--' + cls + '">' +
+            '<i></i>' + label + '（' + arr.length + '）' +
+          '</div>';
+      }
+      var body = arr.length
+        ? arr.map(eventHTML).join('')
+        : '<p class="text-muted" style="font-size:13.5px;padding:6px 0 14px;">该时段暂无收录条目</p>';
+
+      return '<div class="tl-col">' + head + body + '</div>';
+    }
+
+    var left = state.region === 'world'
+      ? colHTML('world', '世界史', worldList)
+      : colHTML('cn', '中国史', cnList);
+
+    var right = state.region === 'world'
+      ? ''
+      : (state.region === 'cn'
+        ? ''
+        : colHTML('world', '世界史', worldList));
+
+    if (state.region === 'all') {
+      return (
+        '<div class="era__split">' +
+          left +
+          '<div class="tl-axis" aria-hidden="true"></div>' +
+          right +
+        '</div>'
+      );
+    }
+    // 单边筛选时不需要中线
+    return '<div class="era__split" style="grid-template-columns:1fr;">' + left + '</div>';
+  }
+
+  function mergedViewHTML(list) {
+    return '<div class="tl-merged">' + list.map(eventHTML).join('') + '</div>';
+  }
+
+  function render() {
+    var root = document.getElementById('timeline-root');
+    if (!root) return;
+
+    var html = '';
+    var total = 0;
+
+    ERAS.forEach(function (era) {
+      var list = ALL_EVENTS.filter(function (ev) {
+        return ev.eraId === era.id && matchRegion(ev) && matchKeyword(ev);
+      });
+      if (!list.length) return;
+      total += list.length;
+
+      html +=
+        '<section class="era" id="era-' + era.id + '">' +
+          '<div class="era__head">' +
+            '<h3 class="era__name">' + esc(era.name) + '</h3>' +
+            '<span class="era__range">' + esc(eraRangeText(era)) + '</span>' +
+            '<span class="era__count">' + list.length + ' 条</span>' +
+          '</div>' +
+          (state.view === 'merged'
+            ? mergedViewHTML(list)
+            : splitViewHTML(era, list)) +
+        '</section>';
+    });
+
+    if (!total) {
+      html =
+        '<div class="tl-empty">' +
+          '<p style="font-size:16px;">没有找到匹配的历史事件</p>' +
+          '<p style="font-size:13.5px;margin-top:6px;">试试更换关键词，或点击「全部」重置筛选</p>' +
+        '</div>';
+    }
+
+    root.innerHTML = html;
+
+    var counter = document.getElementById('tl-count');
+    if (counter) {
+      counter.textContent = '共 ' + total + ' 条 · ' + ERAS.length + ' 个时代';
+    }
+
+    // 更新时代导航的可见性
+    Array.prototype.forEach.call(
+      document.querySelectorAll('[data-era-nav] a'),
+      function (a) {
+        var id = a.getAttribute('href').replace('#', '');
+        var has = root.querySelector('#' + id);
+        a.style.display = has ? '' : 'none';
+      }
+    );
+  }
+
+  /* ---------- 时代导航生成 ---------- */
+
+  function buildEraNav() {
+    var nav = document.querySelector('[data-era-nav]');
+    if (!nav || nav.children.length) return;
+
+    nav.innerHTML = ERAS.map(function (era) {
+      return '<a href="#era-' + era.id + '">' + esc(era.name) + '</a>';
+    }).join('');
+  }
+
+  /* ---------- 交互绑定 ---------- */
+
+  function bind() {
+    // 区域筛选
+    Array.prototype.forEach.call(
+      document.querySelectorAll('[data-filter-region]'),
+      function (btn) {
+        btn.addEventListener('click', function () {
+          state.region = btn.getAttribute('data-filter-region');
+          Array.prototype.forEach.call(
+            document.querySelectorAll('[data-filter-region]'),
+            function (b) { b.classList.toggle('is-active', b === btn); }
+          );
+          render();
+        });
+      }
+    );
+
+    // 视图切换
+    Array.prototype.forEach.call(
+      document.querySelectorAll('[data-view-mode]'),
+      function (btn) {
+        btn.addEventListener('click', function () {
+          state.view = btn.getAttribute('data-view-mode');
+          Array.prototype.forEach.call(
+            document.querySelectorAll('[data-view-mode]'),
+            function (b) { b.classList.toggle('is-active', b === btn); }
+          );
+          render();
+        });
+      }
+    );
+
+    // 搜索（带防抖）
+    var input = document.getElementById('tl-search');
+    if (input) {
+      var timer = null;
+      input.addEventListener('input', function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+          state.keyword = input.value.trim();
+          render();
+        }, 140);
+      });
+    }
+
+    // 重置
+    var reset = document.getElementById('tl-reset');
+    if (reset) {
+      reset.addEventListener('click', function () {
+        state.region = 'all';
+        state.view = 'split';
+        state.keyword = '';
+        if (input) input.value = '';
+        Array.prototype.forEach.call(
+          document.querySelectorAll('[data-filter-region]'),
+          function (b) {
+            b.classList.toggle('is-active', b.getAttribute('data-filter-region') === 'all');
+          }
+        );
+        Array.prototype.forEach.call(
+          document.querySelectorAll('[data-view-mode]'),
+          function (b) {
+            b.classList.toggle('is-active', b.getAttribute('data-view-mode') === 'split');
+          }
+        );
+        render();
+      });
+    }
+  }
+
+  function boot() {
+    if (typeof ERAS === 'undefined' || typeof TIMELINE_DATA === 'undefined') return;
+    buildEraNav();
+    bind();
+    render();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+
+</script>
+</body>
+</html>
